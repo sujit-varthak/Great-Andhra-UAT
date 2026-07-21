@@ -1,0 +1,15 @@
+{
+  "name": "greatandhra-admin-cms",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "backend",
+    "admin"
+  ],
+  "scripts": {
+    "dev:backend": "npm run start:dev --workspace backend",
+    "dev:admin": "npm run dev --workspace admin",
+    "build": "npm run build --workspace backend && npm run build --workspace admin",
+    "lint": "npm run lint --workspace backend && npm run lint --workspace admin"
+  }
+}

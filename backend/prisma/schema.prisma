@@ -1,0 +1,246 @@
+// GreatAndhra Admin CMS — data model
+// Maps the recovered legacy MySQL schema (news, newscategory, chkum, flashnews,
+// trending, epaperimg, schema_data, tags/tags1, news_tags/news_tags1) onto a
+// normalized PostgreSQL schema, per proposal §4 (Data Migration Plan).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  AUTHOR
+  MODERATOR
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+enum ArticleStatus {
+  DRAFT
+  IN_REVIEW
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+// Replaces `chkum`. No legacy passwords are ever imported (proposal §3.3/§4) —
+// every account here is created via invite and sets its own Argon2id password.
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  name              String
+  passwordHash      String?
+  role              Role      @default(AUTHOR)
+  status            UserStatus @default(INVITED)
+  inviteToken       String?   @unique
+  inviteExpiresAt   DateTime?
+
+  totpSecret        String?
+  totpEnabled       Boolean   @default(false)
+
+  failedLoginCount  Int       @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  refreshTokens     RefreshToken[]
+  articles          Article[]
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+// Rotating refresh tokens — only the hash is stored, rotated on every use.
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  replacedBy String?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// Replaces `newscategory`. Self-referential for subcategories.
+model Category {
+  id        String     @id @default(uuid())
+  name      String
+  slug      String     @unique
+  parentId  String?
+  parent    Category?  @relation("CategoryToSubcategory", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Category[] @relation("CategoryToSubcategory")
+  articles  Article[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("categories")
+}
+
+// Replaces tags/tags1 (de-duplicated).
+model Tag {
+  id        String        @id @default(uuid())
+  name      String        @unique
+  slug      String        @unique
+  articles  ArticleTag[]
+
+  createdAt DateTime      @default(now())
+
+  @@map("tags")
+}
+
+// Replaces news_tags/news_tags1 (de-duplicated join table).
+model ArticleTag {
+  articleId String
+  tagId     String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@map("article_tags")
+}
+
+// Replaces `news`. schemaData carries the old `schema_data` movie/cast/review
+// fields as a flexible JSON blob rather than a rigid separate table.
+model Article {
+  id                String        @id @default(uuid())
+  title             String
+  slug              String        @unique
+  body              String
+  excerpt           String?
+
+  categoryId        String?
+  category          Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags              ArticleTag[]
+
+  authorId          String
+  author            User          @relation(fields: [authorId], references: [id])
+
+  publisherName     String?
+  featuredImageUrl  String?
+
+  seoTitle          String?
+  seoDescription    String?
+
+  isHot             Boolean       @default(false)
+  isTrending        Boolean       @default(false)
+  isTopFive         Boolean       @default(false)
+  isMobileVisible   Boolean       @default(true)
+
+  status            ArticleStatus @default(DRAFT)
+  scheduledAt       DateTime?
+  publishedAt       DateTime?
+
+  viewCount         Int           @default(0)
+
+  // Movie/review structured data: { cast: string[], director: string, rating: number, ... }
+  schemaData        Json?
+
+  ratings           Rating[]
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([status])
+  @@index([categoryId])
+  @@map("articles")
+}
+
+// Replaces `flashnews`.
+model FlashNews {
+  id        String   @id @default(uuid())
+  headline  String
+  linkUrl   String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("flash_news")
+}
+
+// Replaces `trending`.
+model TrendingLink {
+  id        String   @id @default(uuid())
+  title     String
+  linkUrl   String
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("trending_links")
+}
+
+// Replaces `dontmiss`.
+model DontMiss {
+  id        String   @id @default(uuid())
+  title     String
+  linkUrl   String
+  imageUrl  String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dont_miss")
+}
+
+// Replaces `epaperimg`.
+model EpaperImage {
+  id         String   @id @default(uuid())
+  editionDate DateTime
+  pageNumber Int
+  imageUrl   String
+  createdAt  DateTime @default(now())
+
+  @@unique([editionDate, pageNumber])
+  @@map("epaper_images")
+}
+
+model Rating {
+  id          String   @id @default(uuid())
+  articleId   String
+  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  value       Int
+  fingerprint String
+  createdAt   DateTime @default(now())
+
+  @@unique([articleId, fingerprint])
+  @@map("ratings")
+}
+
+// Immutable audit trail — every create/update/delete on core entities lands
+// here with actor, timestamps, and before/after values (proposal §3.3).
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entity     String
+  entityId   String?
+  beforeJson Json?
+  afterJson  Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([actorId])
+  @@map("audit_logs")
+}
