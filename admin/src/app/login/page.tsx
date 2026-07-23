@@ -16,19 +16,24 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await apiFetch<{
-        requiresTwoFactor?: boolean;
-        requiresTwoFactorSetup?: boolean;
-        preAuthToken: string;
-      }>('/auth/login', { method: 'POST', body: { email, password } });
+      // 2FA temporarily disabled for demo purposes — restore this block to
+      // send the user through /2fa-setup or /login-2fa again.
+      // const res = await apiFetch<{
+      //   requiresTwoFactor?: boolean;
+      //   requiresTwoFactorSetup?: boolean;
+      //   preAuthToken: string;
+      // }>('/auth/login', { method: 'POST', body: { email, password } });
+      //
+      // sessionStorage.setItem('preAuthToken', res.preAuthToken);
+      //
+      // if (res.requiresTwoFactorSetup) {
+      //   router.push('/2fa-setup');
+      // } else {
+      //   router.push('/login-2fa');
+      // }
 
-      sessionStorage.setItem('preAuthToken', res.preAuthToken);
-
-      if (res.requiresTwoFactorSetup) {
-        router.push('/2fa-setup');
-      } else {
-        router.push('/login-2fa');
-      }
+      await apiFetch('/auth/login', { method: 'POST', body: { email, password } });
+      router.push('/');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Login failed');
     } finally {

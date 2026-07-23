@@ -48,8 +48,13 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('accept-invite')
-  acceptInvite(@Body() dto: AcceptInviteDto) {
-    return this.authService.acceptInvite(dto.inviteToken, dto.password);
+  async acceptInvite(
+    @Body() dto: AcceptInviteDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.acceptInvite(dto.inviteToken, dto.password);
+    setSessionCookies(res, result);
+    return this.authService.me(result.userId);
   }
 
   @UseGuards(PreAuthGuard)
@@ -77,8 +82,10 @@ export class AuthController {
 
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.email, dto.password);
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.login(dto.email, dto.password);
+    setSessionCookies(res, result);
+    return this.authService.me(result.userId);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
