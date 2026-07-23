@@ -21,18 +21,22 @@ import { AccessTokenPayload, PreAuthTokenPayload } from './interfaces/jwt-payloa
 
 const isProd = process.env.NODE_ENV === 'production';
 
+// Frontend (Vercel) and backend (Render) are on different domains in
+// production, so cross-site fetches need SameSite=None (requires Secure) to
+// carry the cookie at all. Locally both run on localhost, which is same-site,
+// so Lax (and a non-Secure cookie over http) still works there.
 function setSessionCookies(res: Response, tokens: SessionTokens) {
   res.cookie('access_token', tokens.accessToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: 'lax',
+    sameSite: isProd ? 'none' : 'lax',
     maxAge: tokens.accessTokenTtlMs,
     path: '/',
   });
   res.cookie('refresh_token', tokens.refreshToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: 'lax',
+    sameSite: isProd ? 'none' : 'lax',
     maxAge: tokens.refreshTokenTtlMs,
     path: '/api/auth',
   });
