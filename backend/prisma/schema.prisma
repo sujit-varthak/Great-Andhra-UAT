@@ -1,14 +1,15 @@
 // GreatAndhra Admin CMS — data model
 // Maps the recovered legacy MySQL schema (news, newscategory, chkum, flashnews,
 // trending, epaperimg, schema_data, tags/tags1, news_tags/news_tags1) onto a
-// normalized PostgreSQL schema, per proposal §4 (Data Migration Plan).
+// normalized MySQL schema, per proposal §4 (Data Migration Plan).
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextIndex"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -122,8 +123,8 @@ model Article {
   id                String        @id @default(uuid())
   title             String
   slug              String        @unique
-  body              String
-  excerpt           String?
+  body              String        @db.LongText
+  excerpt           String?       @db.Text
 
   categoryId        String?
   category          Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -133,10 +134,10 @@ model Article {
   author            User          @relation(fields: [authorId], references: [id])
 
   publisherName     String?
-  featuredImageUrl  String?
+  featuredImageUrl  String?       @db.Text
 
   seoTitle          String?
-  seoDescription    String?
+  seoDescription    String?       @db.Text
 
   isHot             Boolean       @default(false)
   isTrending        Boolean       @default(false)
@@ -159,6 +160,7 @@ model Article {
 
   @@index([status])
   @@index([categoryId])
+  @@fulltext([title, body])
   @@map("articles")
 }
 
@@ -166,7 +168,7 @@ model Article {
 model FlashNews {
   id        String   @id @default(uuid())
   headline  String
-  linkUrl   String?
+  linkUrl   String?  @db.Text
   isActive  Boolean  @default(true)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
@@ -179,7 +181,7 @@ model FlashNews {
 model TrendingLink {
   id        String   @id @default(uuid())
   title     String
-  linkUrl   String
+  linkUrl   String   @db.Text
   isActive  Boolean  @default(true)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
@@ -192,8 +194,8 @@ model TrendingLink {
 model DontMiss {
   id        String   @id @default(uuid())
   title     String
-  linkUrl   String
-  imageUrl  String?
+  linkUrl   String   @db.Text
+  imageUrl  String?  @db.Text
   isActive  Boolean  @default(true)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
@@ -207,7 +209,7 @@ model EpaperImage {
   id         String   @id @default(uuid())
   editionDate DateTime
   pageNumber Int
-  imageUrl   String
+  imageUrl   String   @db.Text
   createdAt  DateTime @default(now())
 
   @@unique([editionDate, pageNumber])
