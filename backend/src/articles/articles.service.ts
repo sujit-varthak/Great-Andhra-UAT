@@ -36,18 +36,22 @@ export class ArticlesService {
   }
 
   private async scheduleIfNeeded(articleId: string, status?: ArticleStatus, scheduledAt?: string) {
-    if (status === 'SCHEDULED' && scheduledAt) {
-      const delay = Math.max(0, new Date(scheduledAt).getTime() - Date.now());
-      await this.publishQueue.add(
-        'publish-article',
-        { articleId },
-        { delay, jobId: `publish-${articleId}` },
-      );
-    } else {
-      // Remove any stale scheduled job if the article is no longer pending schedule.
-      const job = await this.publishQueue.getJob(`publish-${articleId}`);
-      if (job) await job.remove();
-    }
+    // Redis/BullMQ temporarily disabled for demo purposes (no reachable Redis
+    // instance) — restore the block below to re-enable scheduled-publish
+    // queueing once Redis is available again.
+    return;
+    // if (status === 'SCHEDULED' && scheduledAt) {
+    //   const delay = Math.max(0, new Date(scheduledAt).getTime() - Date.now());
+    //   await this.publishQueue.add(
+    //     'publish-article',
+    //     { articleId },
+    //     { delay, jobId: `publish-${articleId}` },
+    //   );
+    // } else {
+    //   // Remove any stale scheduled job if the article is no longer pending schedule.
+    //   const job = await this.publishQueue.getJob(`publish-${articleId}`);
+    //   if (job) await job.remove();
+    // }
   }
 
   list(filters: { status?: ArticleStatus; categoryId?: string; tagId?: string; skip?: number; take?: number }) {
