@@ -14,6 +14,13 @@ export class TrendingService {
     return this.prisma.trendingLink.findMany({ orderBy: { sortOrder: 'asc' } });
   }
 
+  listActive() {
+    return this.prisma.trendingLink.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
   async create(actorId: string, dto: CreateTrendingDto) {
     const item = await this.prisma.trendingLink.create({ data: dto });
     await this.auditService.record({

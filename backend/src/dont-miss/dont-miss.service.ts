@@ -14,6 +14,13 @@ export class DontMissService {
     return this.prisma.dontMiss.findMany({ orderBy: { sortOrder: 'asc' } });
   }
 
+  listActive() {
+    return this.prisma.dontMiss.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
   async create(actorId: string, dto: CreateDontMissDto) {
     const item = await this.prisma.dontMiss.create({ data: dto });
     await this.auditService.record({

@@ -14,6 +14,13 @@ export class FlashNewsService {
     return this.prisma.flashNews.findMany({ orderBy: { sortOrder: 'asc' } });
   }
 
+  listActive() {
+    return this.prisma.flashNews.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
   async create(actorId: string, dto: CreateFlashNewsDto) {
     const item = await this.prisma.flashNews.create({ data: dto });
     await this.auditService.record({
