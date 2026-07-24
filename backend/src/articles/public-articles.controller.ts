@@ -21,9 +21,9 @@ export class PublicArticlesController {
     });
   }
 
-  @Get(':slug')
-  findBySlug(@Param('slug') slug: string) {
-    return this.articlesService.findPublishedBySlug(slug);
+  @Get(':id')
+  findById(@Param('id') id: string) {
+    return this.articlesService.findPublishedById(id);
   }
 
   @Post(':id/view')

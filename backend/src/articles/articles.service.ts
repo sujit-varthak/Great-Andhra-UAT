@@ -202,9 +202,9 @@ export class ArticlesService {
     });
   }
 
-  async findPublishedBySlug(slug: string) {
+  async findPublishedById(id: string) {
     const article = await this.prisma.article.findFirst({
-      where: { slug, status: 'PUBLISHED' },
+      where: { id, status: 'PUBLISHED' },
       include: articleInclude,
     });
     if (!article) throw new NotFoundException('Article not found');
