@@ -3,6 +3,7 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { refresh } = useAuth();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -33,6 +35,7 @@ export default function LoginPage() {
       // }
 
       await apiFetch('/auth/login', { method: 'POST', body: { email, password } });
+      await refresh();
       router.push('/');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Login failed');
