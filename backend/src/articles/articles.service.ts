@@ -237,6 +237,21 @@ export class ArticlesService {
     });
   }
 
+  // Opinion feed: published articles in the "opinion" category, whose parent
+  // category is "politics" — filtered by slug so a future rename of either
+  // category doesn't break this query.
+  findOpinionFeed(take = 5) {
+    return this.prisma.article.findMany({
+      where: {
+        status: 'PUBLISHED',
+        category: { slug: 'opinion', parent: { slug: 'politics' } },
+      },
+      include: articleInclude,
+      orderBy: { publishedAt: 'desc' },
+      take,
+    });
+  }
+
   async incrementViewCount(id: string) {
     await this.prisma.article.update({
       where: { id },

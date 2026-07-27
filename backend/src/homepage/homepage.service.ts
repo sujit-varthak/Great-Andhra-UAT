@@ -12,9 +12,10 @@ export class HomepageService {
   // miss, etc.) should follow the same shape: add a settled call below and a
   // key to the returned object.
   async getHomepage() {
-    const [bigStory, trending] = await Promise.allSettled([
+    const [bigStory, trending, opinion] = await Promise.allSettled([
       this.getBigStory(),
       this.articlesService.findTrendingFeed(15),
+      this.articlesService.findOpinionFeed(5),
     ]);
 
     if (bigStory.status === 'rejected') {
@@ -23,19 +24,25 @@ export class HomepageService {
     if (trending.status === 'rejected') {
       this.logger.error('Failed to load trending section', trending.reason);
     }
+    if (opinion.status === 'rejected') {
+      this.logger.error('Failed to load opinion section', opinion.reason);
+    }
 
     const bigStoryValue = bigStory.status === 'fulfilled' ? bigStory.value : { hero: null, related: [] };
     const trendingValue = trending.status === 'fulfilled' ? trending.value : [];
+    const opinionValue = opinion.status === 'fulfilled' ? opinion.value : [];
 
     // Whichever article currently holds the hero slot is hidden from every
     // other article-based section — recalculated fresh each request, so once
     // a different article becomes the hero, the old one is no longer excluded.
     const heroId = bigStoryValue.hero?.id;
-    const filteredTrending = heroId ? trendingValue.filter((article) => article.id !== heroId) : trendingValue;
+    const excludeHero = (articles: typeof trendingValue) =>
+      heroId ? articles.filter((article) => article.id !== heroId) : articles;
 
     return {
       bigStory: bigStoryValue,
-      trending: filteredTrending,
+      trending: excludeHero(trendingValue),
+      opinion: excludeHero(opinionValue),
     };
   }
 
