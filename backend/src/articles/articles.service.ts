@@ -237,19 +237,48 @@ export class ArticlesService {
     });
   }
 
-  // Opinion feed: published articles in the "opinion" category, whose parent
-  // category is "politics" — filtered by slug so a future rename of either
-  // category doesn't break this query.
-  findOpinionFeed(take = 5) {
+  // Generic category-path feed: published articles in a given sub-category,
+  // filtered by slug (not id) so a future rename of either category doesn't
+  // break the query. Used for every homepage section that's just "the latest
+  // N published articles in category X under parent Y".
+  findByCategoryPath(categorySlug: string, parentSlug: string, take = 5) {
     return this.prisma.article.findMany({
       where: {
         status: 'PUBLISHED',
-        category: { slug: 'opinion', parent: { slug: 'politics' } },
+        category: { slug: categorySlug, parent: { slug: parentSlug } },
       },
       include: articleInclude,
       orderBy: { publishedAt: 'desc' },
       take,
     });
+  }
+
+  findOpinionFeed(take = 5) {
+    return this.findByCategoryPath('opinion', 'politics', take);
+  }
+
+  findMovieNewsFeed(take = 5) {
+    return this.findByCategoryPath('movie-news', 'movies', take);
+  }
+
+  findMovieGossipFeed(take = 5) {
+    return this.findByCategoryPath('movie-gossip', 'movies', take);
+  }
+
+  findAndhraNewsFeed(take = 5) {
+    return this.findByCategoryPath('andhra-news', 'politics', take);
+  }
+
+  findTelanganaNewsFeed(take = 5) {
+    return this.findByCategoryPath('telengana-news', 'politics', take);
+  }
+
+  findPoliticsGossipFeed(take = 5) {
+    return this.findByCategoryPath('politics-gossip', 'politics', take);
+  }
+
+  findReviewsFeed(take = 5) {
+    return this.findByCategoryPath('reviews', 'movies', take);
   }
 
   async incrementViewCount(id: string) {
