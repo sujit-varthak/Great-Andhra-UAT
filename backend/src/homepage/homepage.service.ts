@@ -8,18 +8,34 @@ export class HomepageService {
   constructor(private readonly articlesService: ArticlesService) {}
 
   // Each section is fetched independently so one failing section doesn't take
-  // down the rest of the homepage response. New sections (trending, flash
-  // news, etc.) should follow the same shape: add a settled call below and a
+  // down the rest of the homepage response. New sections (flash news, dont
+  // miss, etc.) should follow the same shape: add a settled call below and a
   // key to the returned object.
   async getHomepage() {
-    const [bigStory] = await Promise.allSettled([this.getBigStory()]);
+    const [bigStory, trending] = await Promise.allSettled([
+      this.getBigStory(),
+      this.articlesService.findTrendingFeed(15),
+    ]);
 
     if (bigStory.status === 'rejected') {
       this.logger.error('Failed to load bigStory section', bigStory.reason);
     }
+    if (trending.status === 'rejected') {
+      this.logger.error('Failed to load trending section', trending.reason);
+    }
+
+    const bigStoryValue = bigStory.status === 'fulfilled' ? bigStory.value : { hero: null, related: [] };
+    const trendingValue = trending.status === 'fulfilled' ? trending.value : [];
+
+    // Whichever article currently holds the hero slot is hidden from every
+    // other article-based section — recalculated fresh each request, so once
+    // a different article becomes the hero, the old one is no longer excluded.
+    const heroId = bigStoryValue.hero?.id;
+    const filteredTrending = heroId ? trendingValue.filter((article) => article.id !== heroId) : trendingValue;
 
     return {
-      bigStory: bigStory.status === 'fulfilled' ? bigStory.value : { hero: null, related: [] },
+      bigStory: bigStoryValue,
+      trending: filteredTrending,
     };
   }
 

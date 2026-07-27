@@ -225,6 +225,18 @@ export class ArticlesService {
     });
   }
 
+  // Trending feed: published articles flagged isTrending, most-recently-updated
+  // first. Backend returns a fixed upper bound; the frontend trims to however
+  // many actually fit based on title length.
+  findTrendingFeed(take = 15) {
+    return this.prisma.article.findMany({
+      where: { status: 'PUBLISHED', isTrending: true },
+      include: articleInclude,
+      orderBy: { updatedAt: 'desc' },
+      take,
+    });
+  }
+
   async incrementViewCount(id: string) {
     await this.prisma.article.update({
       where: { id },
