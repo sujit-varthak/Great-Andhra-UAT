@@ -35,6 +35,7 @@ export function ArticleForm({ article }: Props) {
   const [isTrending, setIsTrending] = useState(article?.isTrending ?? false);
   const [isTopFive, setIsTopFive] = useState(article?.isTopFive ?? false);
   const [isMobileVisible, setIsMobileVisible] = useState(article?.isMobileVisible ?? true);
+  const [isBigStory, setIsBigStory] = useState(article?.isBigStory ?? false);
   const [status, setStatus] = useState<ArticleStatus>(article?.status ?? 'DRAFT');
   const [scheduledAt, setScheduledAt] = useState(
     article?.scheduledAt ? article.scheduledAt.slice(0, 16) : '',
@@ -90,6 +91,7 @@ export function ArticleForm({ article }: Props) {
       isTrending,
       isTopFive,
       isMobileVisible,
+      isBigStory,
       status,
       scheduledAt: status === 'SCHEDULED' && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
       schemaData,
@@ -214,6 +216,14 @@ export function ArticleForm({ article }: Props) {
             onChange={(e) => setIsMobileVisible(e.target.checked)}
           />{' '}
           Mobile visible
+        </label>
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={isBigStory}
+            onChange={(e) => setIsBigStory(e.target.checked)}
+          />{' '}
+          Big Story
         </label>
       </div>
 

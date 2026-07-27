@@ -211,6 +211,18 @@ export class ArticlesService {
     return article;
   }
 
+  // Big Story feed: published articles flagged isBigStory, most-recently-updated
+  // first. Multiple articles can carry the flag — the caller picks the front of
+  // this list as the hero and the rest as related.
+  findBigStoryFeed(take = 4) {
+    return this.prisma.article.findMany({
+      where: { status: 'PUBLISHED', isBigStory: true },
+      include: articleInclude,
+      orderBy: { updatedAt: 'desc' },
+      take,
+    });
+  }
+
   async incrementViewCount(id: string) {
     await this.prisma.article.update({
       where: { id },

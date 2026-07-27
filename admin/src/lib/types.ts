@@ -58,6 +58,7 @@ export interface Article {
   isTrending: boolean;
   isTopFive: boolean;
   isMobileVisible: boolean;
+  isBigStory: boolean;
   status: ArticleStatus;
   scheduledAt: string | null;
   publishedAt: string | null;

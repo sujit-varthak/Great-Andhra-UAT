@@ -17,6 +17,7 @@ import { EpaperModule } from './epaper/epaper.module';
 import { RatingsModule } from './ratings/ratings.module';
 import { MediaModule } from './media/media.module';
 import { SearchModule } from './search/search.module';
+import { HomepageModule } from './homepage/homepage.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { SearchModule } from './search/search.module';
     RatingsModule,
     MediaModule,
     SearchModule,
+    HomepageModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

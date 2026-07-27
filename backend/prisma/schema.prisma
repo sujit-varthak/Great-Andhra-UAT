@@ -142,6 +142,7 @@ model Article {
   isTrending        Boolean       @default(false)
   isTopFive         Boolean       @default(false)
   isMobileVisible   Boolean       @default(true)
+  isBigStory        Boolean       @default(false)
 
   status            ArticleStatus @default(DRAFT)
   scheduledAt       DateTime?

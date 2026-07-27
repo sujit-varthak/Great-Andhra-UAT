@@ -65,6 +65,10 @@ export class CreateArticleDto {
   isMobileVisible?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  isBigStory?: boolean;
+
+  @IsOptional()
   @IsEnum(ArticleStatus)
   status?: ArticleStatus;
 
