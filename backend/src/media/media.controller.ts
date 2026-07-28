@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  Get,
   Post,
   Req,
   UploadedFile,
@@ -40,5 +41,10 @@ export class MediaController {
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
     return this.mediaService.uploadImage(actor.sub, file.buffer, req.ip);
+  }
+
+  @Get('library')
+  listLibrary() {
+    return this.mediaService.listLibrary();
   }
 }

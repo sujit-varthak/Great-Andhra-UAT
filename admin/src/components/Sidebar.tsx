@@ -20,6 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/trending', label: 'Trending' },
   { href: '/dont-miss', label: "Don't Miss" },
   { href: '/epaper', label: 'E-Paper' },
+  { href: '/media', label: 'Media Library' },
   { href: '/users', label: 'Users & Roles', roles: ['ADMIN'] },
   { href: '/audit-log', label: 'Audit Log', roles: ['ADMIN'] },
 ];

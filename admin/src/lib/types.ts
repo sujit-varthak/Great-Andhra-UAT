@@ -100,6 +100,14 @@ export interface EpaperImageItem {
   imageUrl: string;
 }
 
+export interface MediaLibraryItem {
+  id: string;
+  title: string;
+  status: ArticleStatus;
+  featuredImageUrl: string;
+  updatedAt: string;
+}
+
 export interface AuditLogItem {
   id: string;
   actorId: string | null;
