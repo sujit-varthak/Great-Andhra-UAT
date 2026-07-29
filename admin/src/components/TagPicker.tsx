@@ -99,7 +99,7 @@ export function TagPicker({ value, onChange }: Props) {
                 e.preventDefault();
                 selectTag(t);
               }}
-              style={{ padding: '8px 12px', cursor: 'pointer' }}
+              style={{ padding: '8px 12px', cursor: 'pointer', color: '#000' }}
             >
               {t.name}
             </div>
@@ -110,7 +110,7 @@ export function TagPicker({ value, onChange }: Props) {
                 e.preventDefault();
                 createTag();
               }}
-              style={{ padding: '8px 12px', cursor: 'pointer', fontStyle: 'italic', color: '#555' }}
+              style={{ padding: '8px 12px', cursor: 'pointer', fontStyle: 'italic', color: '#000' }}
             >
               {creating ? 'Creating…' : `+ Create new tag: "${trimmed}"`}
             </div>
@@ -129,6 +129,7 @@ export function TagPicker({ value, onChange }: Props) {
               padding: '4px 10px',
               borderRadius: 999,
               background: '#eee',
+              color: '#000',
               fontSize: 13,
             }}
           >
@@ -144,6 +145,7 @@ export function TagPicker({ value, onChange }: Props) {
                 fontSize: 14,
                 lineHeight: 1,
                 padding: 0,
+                color: '#000',
               }}
             >
               ×
