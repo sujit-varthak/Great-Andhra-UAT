@@ -54,19 +54,31 @@ export class ArticlesService {
     // }
   }
 
-  list(filters: { status?: ArticleStatus; categoryId?: string; tagId?: string; skip?: number; take?: number }) {
+  async list(filters: { status?: ArticleStatus; categoryId?: string; tagId?: string; skip?: number; take?: number }) {
     const where: Record<string, unknown> = {};
     if (filters.status) where.status = filters.status;
     if (filters.categoryId) where.categoryId = filters.categoryId;
     if (filters.tagId) where.tags = { some: { tagId: filters.tagId } };
 
-    return this.prisma.article.findMany({
-      where,
-      include: articleInclude,
-      orderBy: { createdAt: 'desc' },
-      skip: filters.skip ?? 0,
-      take: filters.take ?? 25,
-    });
+    const [items, total] = await Promise.all([
+      this.prisma.article.findMany({
+        where,
+        include: articleInclude,
+        orderBy: { createdAt: 'desc' },
+        skip: filters.skip ?? 0,
+        take: filters.take ?? 25,
+      }),
+      this.prisma.article.count({ where }),
+    ]);
+
+    return { items, total };
+  }
+
+  async countByStatus() {
+    const rows = await this.prisma.article.groupBy({ by: ['status'], _count: true });
+    const counts: Record<string, number> = { DRAFT: 0, IN_REVIEW: 0, SCHEDULED: 0, PUBLISHED: 0, ARCHIVED: 0 };
+    for (const row of rows) counts[row.status] = row._count;
+    return counts;
   }
 
   async findOne(id: string) {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
-import { Article, ArticleStatus } from '@/lib/types';
+import { ArticleStatus } from '@/lib/types';
 
 const STATUSES: ArticleStatus[] = ['DRAFT', 'IN_REVIEW', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'];
 
@@ -11,13 +11,8 @@ export default function DashboardHomePage() {
   const [counts, setCounts] = useState<Record<string, number> | null>(null);
 
   useEffect(() => {
-    apiFetch<Article[]>('/articles?take=500')
-      .then((articles) => {
-        const c: Record<string, number> = {};
-        for (const status of STATUSES) c[status] = 0;
-        for (const article of articles) c[article.status] = (c[article.status] || 0) + 1;
-        setCounts(c);
-      })
+    apiFetch<Record<string, number>>('/articles/stats')
+      .then(setCounts)
       .catch(() => setCounts(null));
   }, []);
 

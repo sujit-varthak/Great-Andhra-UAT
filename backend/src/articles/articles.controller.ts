@@ -41,6 +41,11 @@ export class ArticlesController {
     });
   }
 
+  @Get('stats')
+  stats() {
+    return this.articlesService.countByStatus();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.articlesService.findOne(id);

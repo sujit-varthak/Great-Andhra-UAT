@@ -6,20 +6,40 @@ import { apiFetch, ApiError } from '@/lib/api';
 import { Article, ArticleStatus } from '@/lib/types';
 
 const STATUS_OPTIONS: ArticleStatus[] = ['DRAFT', 'IN_REVIEW', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'];
+const PAGE_SIZE = 50;
 
 export default function ArticlesListPage() {
   const [articles, setArticles] = useState<Article[]>([]);
+  const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
 
   function load() {
     setLoading(true);
-    const qs = statusFilter ? `?status=${statusFilter}` : '';
-    apiFetch<Article[]>(`/articles${qs}`)
-      .then(setArticles)
+    const qs = new URLSearchParams({ take: String(PAGE_SIZE) });
+    if (statusFilter) qs.set('status', statusFilter);
+    apiFetch<{ items: Article[]; total: number }>(`/articles?${qs}`)
+      .then((res) => {
+        setArticles(res.items);
+        setTotal(res.total);
+      })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load articles'))
       .finally(() => setLoading(false));
+  }
+
+  function loadMore() {
+    setLoadingMore(true);
+    const qs = new URLSearchParams({ take: String(PAGE_SIZE), skip: String(articles.length) });
+    if (statusFilter) qs.set('status', statusFilter);
+    apiFetch<{ items: Article[]; total: number }>(`/articles?${qs}`)
+      .then((res) => {
+        setArticles((prev) => [...prev, ...res.items]);
+        setTotal(res.total);
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load more articles'))
+      .finally(() => setLoadingMore(false));
   }
 
   useEffect(load, [statusFilter]);
@@ -98,6 +118,19 @@ export default function ArticlesListPage() {
           </table>
         )}
       </div>
+
+      {!loading && articles.length > 0 && (
+        <div className="toolbar" style={{ justifyContent: 'space-between' }}>
+          <p className="hint-text" style={{ margin: 0 }}>
+            Showing {articles.length} of {total}
+          </p>
+          {articles.length < total && (
+            <button className="btn" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? 'Loading…' : 'Load More'}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
