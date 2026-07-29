@@ -286,7 +286,7 @@ export class ArticlesService {
   }
 
   findPoliticsGossipFeed(take = 5) {
-    return this.findByCategoryPath('politics-gossip', 'politics', take);
+    return this.findByCategoryPath('gossip', 'politics', take);
   }
 
   findReviewsFeed(take = 5) {
