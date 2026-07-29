@@ -6,6 +6,7 @@ import { apiFetch, ApiError } from '@/lib/api';
 import { Article, ArticleStatus, Category, Tag } from '@/lib/types';
 import { RichTextEditor } from './RichTextEditor';
 import { ImageUploader } from './ImageUploader';
+import { TagPicker } from './TagPicker';
 
 const STATUS_OPTIONS: ArticleStatus[] = ['DRAFT', 'IN_REVIEW', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED'];
 
@@ -18,13 +19,12 @@ export function ArticleForm({ article }: Props) {
   const isEdit = Boolean(article);
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
 
   const [title, setTitle] = useState(article?.title ?? '');
   const [body, setBody] = useState(article?.body ?? '');
   const [excerpt, setExcerpt] = useState(article?.excerpt ?? '');
   const [categoryId, setCategoryId] = useState(article?.categoryId ?? '');
-  const [tagIds, setTagIds] = useState<string[]>(article?.tags?.map((t) => t.tag.id) ?? []);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>(article?.tags?.map((t) => t.tag) ?? []);
   const [publisherName, setPublisherName] = useState(article?.publisherName ?? '');
   const [featuredImageUrl, setFeaturedImageUrl] = useState<string | null>(
     article?.featuredImageUrl ?? null,
@@ -53,12 +53,7 @@ export function ArticleForm({ article }: Props) {
 
   useEffect(() => {
     apiFetch<Category[]>('/categories').then(setCategories).catch(() => {});
-    apiFetch<Tag[]>('/tags').then(setTags).catch(() => {});
   }, []);
-
-  function toggleTag(id: string) {
-    setTagIds((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
-  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -82,7 +77,7 @@ export function ArticleForm({ article }: Props) {
       body,
       excerpt: excerpt || undefined,
       categoryId: categoryId || undefined,
-      tagIds,
+      tagIds: selectedTags.map((t) => t.id),
       publisherName: publisherName || undefined,
       featuredImageUrl: featuredImageUrl || undefined,
       seoTitle: seoTitle || undefined,
@@ -155,18 +150,7 @@ export function ArticleForm({ article }: Props) {
 
         <div className="field">
           <label>Tags</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {tags.map((t) => (
-              <label key={t.id} className="checkbox-row" style={{ marginBottom: 0 }}>
-                <input
-                  type="checkbox"
-                  checked={tagIds.includes(t.id)}
-                  onChange={() => toggleTag(t.id)}
-                />
-                {t.name}
-              </label>
-            ))}
-          </div>
+          <TagPicker value={selectedTags} onChange={setSelectedTags} />
         </div>
 
         <ImageUploader value={featuredImageUrl} onChange={setFeaturedImageUrl} label="Featured image" />

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -14,8 +14,8 @@ export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
 
   @Get()
-  list() {
-    return this.tagsService.list();
+  list(@Query('search') search?: string) {
+    return search ? this.tagsService.search(search) : this.tagsService.list();
   }
 
   @Post()

@@ -14,6 +14,23 @@ export class TagsService {
     return this.prisma.tag.findMany({ orderBy: { name: 'asc' } });
   }
 
+  // Used by the admin tag-picker autocomplete — capped and only queried
+  // once the admin has actually typed something, since the full tag list
+  // is now in the thousands.
+  search(query: string) {
+    if (!query) return [];
+    return this.prisma.tag.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { slug: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      orderBy: { name: 'asc' },
+      take: 20,
+    });
+  }
+
   async create(actorId: string, name: string) {
     const slug = slugify(name, { lower: true, strict: true });
     const existing = await this.prisma.tag.findUnique({ where: { slug } });
