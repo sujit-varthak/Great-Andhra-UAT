@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -44,7 +45,10 @@ export class MediaController {
   }
 
   @Get('library')
-  listLibrary() {
-    return this.mediaService.listLibrary();
+  listLibrary(@Query('skip') skip?: string, @Query('take') take?: string) {
+    return this.mediaService.listLibrary({
+      skip: skip ? Number(skip) : undefined,
+      take: take ? Number(take) : undefined,
+    });
   }
 }

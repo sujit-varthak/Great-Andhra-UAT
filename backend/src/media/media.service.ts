@@ -52,17 +52,25 @@ export class MediaService {
   // newest-updated first — preview + which post it's attached to. There's no
   // separate media table, so this only surfaces images actually attached to
   // an article, not ones uploaded and then abandoned before saving.
-  listLibrary() {
-    return this.prisma.article.findMany({
-      where: { featuredImageUrl: { not: null } },
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        featuredImageUrl: true,
-        updatedAt: true,
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
+  async listLibrary(filters: { skip?: number; take?: number }) {
+    const where = { featuredImageUrl: { not: null } };
+    const [items, total] = await Promise.all([
+      this.prisma.article.findMany({
+        where,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          featuredImageUrl: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip: filters.skip ?? 0,
+        take: filters.take ?? 25,
+      }),
+      this.prisma.article.count({ where }),
+    ]);
+
+    return { items, total };
   }
 }
