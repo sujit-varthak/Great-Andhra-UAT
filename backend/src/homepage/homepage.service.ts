@@ -22,6 +22,8 @@ export class HomepageService {
     telanganaNews: () => this.articlesService.findTelanganaNewsFeed(5),
     politicsGossip: () => this.articlesService.findPoliticsGossipFeed(5),
     reviews: () => this.articlesService.findReviewsFeed(5),
+    talkOfTheTown: () => this.articlesService.findTalkOfTheTownFeed(5),
+    featured: () => this.articlesService.findFeaturedFeed(5),
   };
 
   // Each section is fetched independently so one failing section doesn't take

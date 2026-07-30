@@ -289,6 +289,30 @@ export class ArticlesService {
     return items.map(withUrlPath);
   }
 
+  // Talk of the Town feed: published articles flagged isTalkOfTheTown, capped
+  // at 5 regardless of how many carry the flag.
+  async findTalkOfTheTownFeed(take = 5) {
+    const items = await this.prisma.article.findMany({
+      where: { status: 'PUBLISHED', isTalkOfTheTown: true },
+      include: articleInclude,
+      orderBy: { updatedAt: 'desc' },
+      take,
+    });
+    return items.map(withUrlPath);
+  }
+
+  // Featured feed: published articles flagged isFeatured, capped at 5
+  // regardless of how many carry the flag.
+  async findFeaturedFeed(take = 5) {
+    const items = await this.prisma.article.findMany({
+      where: { status: 'PUBLISHED', isFeatured: true },
+      include: articleInclude,
+      orderBy: { updatedAt: 'desc' },
+      take,
+    });
+    return items.map(withUrlPath);
+  }
+
   // Generic category-path feed: published articles in a given sub-category,
   // filtered by slug (not id) so a future rename of either category doesn't
   // break the query. Used for every homepage section that's just "the latest
