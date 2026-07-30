@@ -63,7 +63,16 @@ export class ArticlesService {
     const [items, total] = await Promise.all([
       this.prisma.article.findMany({
         where,
-        include: articleInclude,
+        // List view only needs summary fields - body/schemaData/seoDescription
+        // etc. were bloating every page load (~4.5KB/article for no reason).
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          viewCount: true,
+          updatedAt: true,
+          category: { select: { id: true, name: true } },
+        },
         orderBy: { createdAt: 'desc' },
         skip: filters.skip ?? 0,
         take: filters.take ?? 25,

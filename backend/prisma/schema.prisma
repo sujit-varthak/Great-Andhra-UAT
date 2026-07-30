@@ -160,6 +160,7 @@ model Article {
 
   @@index([status])
   @@index([categoryId])
+  @@index([createdAt])
   @@map("articles")
 }
 

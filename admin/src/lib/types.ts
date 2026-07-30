@@ -68,6 +68,17 @@ export interface Article {
   updatedAt: string;
 }
 
+// Matches the trimmed `select` in backend ArticlesService.list() - the list
+// endpoint intentionally omits body/schemaData/seo fields to keep pages small.
+export interface ArticleListItem {
+  id: string;
+  title: string;
+  status: ArticleStatus;
+  viewCount: number;
+  updatedAt: string;
+  category: { id: string; name: string } | null;
+}
+
 export interface FlashNewsItem {
   id: string;
   headline: string;

@@ -9,3 +9,4 @@ dist/
 /admin/.next/
 minio-data/
 postgres-data/
+graphify-out/
