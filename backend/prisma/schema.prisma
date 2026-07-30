@@ -120,6 +120,7 @@ model ArticleTag {
 // fields as a flexible JSON blob rather than a rigid separate table.
 model Article {
   id                String        @id @default(uuid())
+  shortId           Int           @unique @default(autoincrement())
   title             String
   slug              String        @unique
   body              String
@@ -143,6 +144,8 @@ model Article {
   isTopFive         Boolean       @default(false)
   isMobileVisible   Boolean       @default(true)
   isBigStory        Boolean       @default(false)
+  isTalkOfTheTown   Boolean       @default(false)
+  isFeatured        Boolean       @default(false)
 
   status            ArticleStatus @default(DRAFT)
   scheduledAt       DateTime?

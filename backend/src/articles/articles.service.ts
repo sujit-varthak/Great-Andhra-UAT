@@ -10,10 +10,34 @@ import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
 
 const articleInclude = {
-  category: true,
+  category: { include: { parent: true } },
   tags: { include: { tag: true } },
   author: { select: { id: true, name: true, email: true } },
 };
+
+type ArticleWithCategoryPath = {
+  shortId: number;
+  title: string;
+  category: { slug: string; parent: { slug: string } | null } | null;
+};
+
+// Public article URL: /{shortId}/{category}/{subCategory?}/{title-slug}. The
+// subcategory segment only appears when the category itself has a parent
+// (e.g. movies > reviews); a top-level-only category or no category at all
+// just drops straight to the next segment.
+function buildUrlPath(article: ArticleWithCategoryPath): string {
+  const segments = [String(article.shortId)];
+  if (article.category) {
+    if (article.category.parent) segments.push(article.category.parent.slug);
+    segments.push(article.category.slug);
+  }
+  segments.push(slugify(article.title, { lower: true, strict: true }));
+  return segments.join('/');
+}
+
+function withUrlPath<T extends ArticleWithCategoryPath>(article: T): T & { urlPath: string } {
+  return { ...article, urlPath: buildUrlPath(article) };
+}
 
 @Injectable()
 export class ArticlesService {
@@ -215,14 +239,15 @@ export class ArticlesService {
 
   // --- Public content API (published articles only, no auth) ---
 
-  listPublished(filters: { categoryId?: string; skip?: number; take?: number }) {
-    return this.prisma.article.findMany({
+  async listPublished(filters: { categoryId?: string; skip?: number; take?: number }) {
+    const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', categoryId: filters.categoryId },
       include: articleInclude,
       orderBy: { publishedAt: 'desc' },
       skip: filters.skip ?? 0,
       take: filters.take ?? 25,
     });
+    return items.map(withUrlPath);
   }
 
   async findPublishedById(id: string) {
@@ -231,39 +256,41 @@ export class ArticlesService {
       include: articleInclude,
     });
     if (!article) throw new NotFoundException('Article not found');
-    return article;
+    return withUrlPath(article);
   }
 
   // Big Story feed: published articles flagged isBigStory, most-recently-updated
   // first. Multiple articles can carry the flag — the caller picks the front of
   // this list as the hero and the rest as related.
-  findBigStoryFeed(take = 4) {
-    return this.prisma.article.findMany({
+  async findBigStoryFeed(take = 4) {
+    const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isBigStory: true },
       include: articleInclude,
       orderBy: { updatedAt: 'desc' },
       take,
     });
+    return items.map(withUrlPath);
   }
 
   // Trending feed: published articles flagged isTrending, most-recently-updated
   // first. Backend returns a fixed upper bound; the frontend trims to however
   // many actually fit based on title length.
-  findTrendingFeed(take = 15) {
-    return this.prisma.article.findMany({
+  async findTrendingFeed(take = 17) {
+    const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isTrending: true },
       include: articleInclude,
       orderBy: { updatedAt: 'desc' },
       take,
     });
+    return items.map(withUrlPath);
   }
 
   // Generic category-path feed: published articles in a given sub-category,
   // filtered by slug (not id) so a future rename of either category doesn't
   // break the query. Used for every homepage section that's just "the latest
   // N published articles in category X under parent Y".
-  findByCategoryPath(categorySlug: string, parentSlug: string, take = 5) {
-    return this.prisma.article.findMany({
+  async findByCategoryPath(categorySlug: string, parentSlug: string, take = 5) {
+    const items = await this.prisma.article.findMany({
       where: {
         status: 'PUBLISHED',
         category: { slug: categorySlug, parent: { slug: parentSlug } },
@@ -272,6 +299,7 @@ export class ArticlesService {
       orderBy: { publishedAt: 'desc' },
       take,
     });
+    return items.map(withUrlPath);
   }
 
   findOpinionFeed(take = 5) {

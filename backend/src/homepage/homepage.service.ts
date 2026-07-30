@@ -14,7 +14,7 @@ export class HomepageService {
   // need their own shape (like bigStory's hero/related split) are handled
   // separately below, then merged into the same response.
   private readonly categorySections: Record<string, () => Promise<ArticleSummary>> = {
-    trending: () => this.articlesService.findTrendingFeed(15),
+    trending: () => this.articlesService.findTrendingFeed(17),
     opinion: () => this.articlesService.findOpinionFeed(5),
     movieNews: () => this.articlesService.findMovieNewsFeed(5),
     movieGossip: () => this.articlesService.findMovieGossipFeed(5),
