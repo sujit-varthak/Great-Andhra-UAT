@@ -59,6 +59,8 @@ export interface Article {
   isTopFive: boolean;
   isMobileVisible: boolean;
   isBigStory: boolean;
+  isTalkOfTheTown: boolean;
+  isFeatured: boolean;
   status: ArticleStatus;
   scheduledAt: string | null;
   publishedAt: string | null;

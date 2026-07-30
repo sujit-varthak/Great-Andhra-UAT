@@ -69,6 +69,14 @@ export class CreateArticleDto {
   isBigStory?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  isTalkOfTheTown?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isFeatured?: boolean;
+
+  @IsOptional()
   @IsEnum(ArticleStatus)
   status?: ArticleStatus;
 

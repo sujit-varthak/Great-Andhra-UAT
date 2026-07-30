@@ -36,6 +36,8 @@ export function ArticleForm({ article }: Props) {
   const [isTopFive, setIsTopFive] = useState(article?.isTopFive ?? false);
   const [isMobileVisible, setIsMobileVisible] = useState(article?.isMobileVisible ?? true);
   const [isBigStory, setIsBigStory] = useState(article?.isBigStory ?? false);
+  const [isTalkOfTheTown, setIsTalkOfTheTown] = useState(article?.isTalkOfTheTown ?? false);
+  const [isFeatured, setIsFeatured] = useState(article?.isFeatured ?? false);
   const [status, setStatus] = useState<ArticleStatus>(article?.status ?? 'DRAFT');
   const [scheduledAt, setScheduledAt] = useState(
     article?.scheduledAt ? article.scheduledAt.slice(0, 16) : '',
@@ -87,6 +89,8 @@ export function ArticleForm({ article }: Props) {
       isTopFive,
       isMobileVisible,
       isBigStory,
+      isTalkOfTheTown,
+      isFeatured,
       status,
       scheduledAt: status === 'SCHEDULED' && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
       schemaData,
@@ -208,6 +212,22 @@ export function ArticleForm({ article }: Props) {
             onChange={(e) => setIsBigStory(e.target.checked)}
           />{' '}
           Big Story
+        </label>
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={isTalkOfTheTown}
+            onChange={(e) => setIsTalkOfTheTown(e.target.checked)}
+          />{' '}
+          Talk of the Town
+        </label>
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={isFeatured}
+            onChange={(e) => setIsFeatured(e.target.checked)}
+          />{' '}
+          Featured
         </label>
       </div>
 
