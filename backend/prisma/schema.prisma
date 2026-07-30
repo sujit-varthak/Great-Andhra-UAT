@@ -193,6 +193,20 @@ model TrendingLink {
   @@map("trending_links")
 }
 
+// Curated USA movie showtime links for the homepage - not tied to Article.
+model UsaMovieSchedule {
+  id           String   @id @default(uuid())
+  title        String
+  linkUrl      String
+  openInNewTab Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("usa_movie_schedule")
+}
+
 // Replaces `dontmiss`.
 model DontMiss {
   id        String   @id @default(uuid())

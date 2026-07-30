@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ArticlesService } from '../articles/articles.service';
+import { UsaMovieScheduleService } from '../usa-movie-schedule/usa-movie-schedule.service';
 
 type ArticleSummary = { id: string }[];
 
@@ -7,7 +8,10 @@ type ArticleSummary = { id: string }[];
 export class HomepageService {
   private readonly logger = new Logger(HomepageService.name);
 
-  constructor(private readonly articlesService: ArticlesService) {}
+  constructor(
+    private readonly articlesService: ArticlesService,
+    private readonly usaMovieScheduleService: UsaMovieScheduleService,
+  ) {}
 
   // Every plain "latest N articles in category X" section lives here — add a
   // new key + fetcher to extend the homepage with another one. Sections that
@@ -24,6 +28,7 @@ export class HomepageService {
     reviews: () => this.articlesService.findReviewsFeed(5),
     talkOfTheTown: () => this.articlesService.findTalkOfTheTownFeed(5),
     featured: () => this.articlesService.findFeaturedFeed(5),
+    usaMovieSchedule: () => this.usaMovieScheduleService.listActive(4),
   };
 
   // Each section is fetched independently so one failing section doesn't take

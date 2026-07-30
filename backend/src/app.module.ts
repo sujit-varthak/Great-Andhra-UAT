@@ -12,6 +12,7 @@ import { TagsModule } from './tags/tags.module';
 import { ArticlesModule } from './articles/articles.module';
 import { FlashNewsModule } from './flash-news/flash-news.module';
 import { TrendingModule } from './trending/trending.module';
+import { UsaMovieScheduleModule } from './usa-movie-schedule/usa-movie-schedule.module';
 import { DontMissModule } from './dont-miss/dont-miss.module';
 import { EpaperModule } from './epaper/epaper.module';
 import { RatingsModule } from './ratings/ratings.module';
@@ -33,6 +34,7 @@ import { HomepageModule } from './homepage/homepage.module';
     ArticlesModule,
     FlashNewsModule,
     TrendingModule,
+    UsaMovieScheduleModule,
     DontMissModule,
     EpaperModule,
     RatingsModule,

@@ -97,6 +97,15 @@ export interface TrendingItem {
   sortOrder: number;
 }
 
+export interface UsaMovieScheduleItem {
+  id: string;
+  title: string;
+  linkUrl: string;
+  openInNewTab: boolean;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export interface DontMissItem {
   id: string;
   title: string;
