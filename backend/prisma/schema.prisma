@@ -157,7 +157,9 @@ model Article {
 
   viewCount         Int           @default(0)
 
-  // Movie/review structured data: { movieName: string, rating: number, releaseDate: string, ... }
+  // Movie/review structured data: { movieName: string, rating: string, releaseDate: string, ... }
+  // rating is free-text (e.g. "2.5/5"), not a bare number - not every rating
+  // scale is out of 10.
   schemaData        Json?
 
   ratings           Rating[]

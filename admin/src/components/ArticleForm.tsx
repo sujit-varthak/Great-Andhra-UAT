@@ -62,7 +62,7 @@ export function ArticleForm({ article }: Props) {
       movieName || movieRating || releaseDate
         ? {
             movieName: movieName || undefined,
-            rating: movieRating ? Number(movieRating) : undefined,
+            rating: movieRating || undefined,
             releaseDate: releaseDate || undefined,
           }
         : undefined;
@@ -265,13 +265,11 @@ export function ArticleForm({ article }: Props) {
             <input id="movieName" value={movieName} onChange={(e) => setMovieName(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="movieRating">Rating (0-10)</label>
+            <label htmlFor="movieRating">Rating</label>
             <input
               id="movieRating"
-              type="number"
-              min={0}
-              max={10}
-              step={0.1}
+              type="text"
+              placeholder="e.g. 2.5/5"
               value={movieRating}
               onChange={(e) => setMovieRating(e.target.value)}
             />
