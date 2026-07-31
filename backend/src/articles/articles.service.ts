@@ -263,14 +263,18 @@ export class ArticlesService {
       categoryFilter = { in: [filters.categoryId, ...children.map((c) => c.id)] };
     }
 
-    const items = await this.prisma.article.findMany({
-      where: { status: 'PUBLISHED', categoryId: categoryFilter },
-      include: articleInclude,
-      orderBy: { publishedAt: 'desc' },
-      skip: filters.skip ?? 0,
-      take: filters.take ?? 25,
-    });
-    return items.map(withUrlPath);
+    const where = { status: 'PUBLISHED' as const, categoryId: categoryFilter };
+    const [items, total] = await Promise.all([
+      this.prisma.article.findMany({
+        where,
+        include: articleInclude,
+        orderBy: { publishedAt: 'desc' },
+        skip: filters.skip ?? 0,
+        take: filters.take ?? 25,
+      }),
+      this.prisma.article.count({ where }),
+    ]);
+    return { items: items.map(withUrlPath), total };
   }
 
   private static readonly UUID_RE =
