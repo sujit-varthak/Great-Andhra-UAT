@@ -39,6 +39,10 @@ export interface Tag {
   slug: string;
 }
 
+export interface TagWithCount extends Tag {
+  articleCount: number;
+}
+
 export interface Article {
   id: string;
   title: string;

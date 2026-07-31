@@ -31,6 +31,56 @@ export class TagsService {
     });
   }
 
+  // Admin management view: searchable, paginated, with a per-tag count of
+  // PUBLISHED articles - optionally restricted to a recent day-range window
+  // instead of all-time. Distinct from search() above, which stays a fast,
+  // uncounted, unpaginated autocomplete for the article editor's tag picker.
+  async listWithStats(params: {
+    search?: string;
+    skip?: number;
+    take?: number;
+    days?: number;
+  }) {
+    const where = params.search
+      ? {
+          OR: [
+            { name: { contains: params.search, mode: 'insensitive' as const } },
+            { slug: { contains: params.search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {};
+
+    const [tags, total] = await Promise.all([
+      this.prisma.tag.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        skip: params.skip ?? 0,
+        take: params.take ?? 25,
+      }),
+      this.prisma.tag.count({ where }),
+    ]);
+
+    if (tags.length === 0) return { items: [], total };
+
+    const publishedAt = params.days
+      ? { gte: new Date(Date.now() - params.days * 24 * 60 * 60 * 1000) }
+      : undefined;
+
+    const counts = await this.prisma.articleTag.groupBy({
+      by: ['tagId'],
+      where: {
+        tagId: { in: tags.map((t) => t.id) },
+        article: { status: 'PUBLISHED', ...(publishedAt ? { publishedAt } : {}) },
+      },
+      _count: { articleId: true },
+    });
+
+    const countByTagId = new Map(counts.map((c) => [c.tagId, c._count.articleId]));
+    const items = tags.map((t) => ({ ...t, articleCount: countByTagId.get(t.id) ?? 0 }));
+
+    return { items, total };
+  }
+
   async create(actorId: string, name: string) {
     const slug = slugify(name, { lower: true, strict: true });
     const existing = await this.prisma.tag.findUnique({ where: { slug } });

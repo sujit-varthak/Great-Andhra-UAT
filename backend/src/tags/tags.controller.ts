@@ -18,6 +18,21 @@ export class TagsController {
     return search ? this.tagsService.search(search) : this.tagsService.list();
   }
 
+  @Get('stats')
+  listWithStats(
+    @Query('search') search?: string,
+    @Query('skip') skip?: string,
+    @Query('take') take?: string,
+    @Query('days') days?: string,
+  ) {
+    return this.tagsService.listWithStats({
+      search,
+      skip: skip ? Number(skip) : undefined,
+      take: take ? Number(take) : undefined,
+      days: days ? Number(days) : undefined,
+    });
+  }
+
   @Post()
   @Roles(Role.ADMIN, Role.EDITOR, Role.AUTHOR)
   create(@CurrentUser() actor: AccessTokenPayload, @Body() dto: CreateTagDto) {
