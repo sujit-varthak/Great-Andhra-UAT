@@ -81,16 +81,16 @@ export class TagsService {
     return { items, total };
   }
 
-  // Homepage "trending tags": ranked by PUBLISHED-article count within a
-  // recent day-range window - unlike listWithStats, this ranks across every
-  // tag by count (not by name), so it groups from the article-tag side
-  // first, then fetches only the top N tags' details.
-  async findTrendingTags(days = 7, take = 15) {
-    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  // Homepage "trending tags": ranked by PUBLISHED-article count, all-time
+  // unless a day-range window is given - unlike listWithStats, this ranks
+  // across every tag by count (not by name), so it groups from the
+  // article-tag side first, then fetches only the top N tags' details.
+  async findTrendingTags(days?: number, take = 15) {
+    const publishedAt = days ? { gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) } : undefined;
 
     const grouped = await this.prisma.articleTag.groupBy({
       by: ['tagId'],
-      where: { article: { status: 'PUBLISHED', publishedAt: { gte: cutoff } } },
+      where: { article: { status: 'PUBLISHED', ...(publishedAt ? { publishedAt } : {}) } },
       _count: { articleId: true },
       orderBy: { _count: { articleId: 'desc' } },
       take,

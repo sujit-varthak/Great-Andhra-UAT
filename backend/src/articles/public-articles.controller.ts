@@ -11,11 +11,13 @@ export class PublicArticlesController {
   @Get()
   list(
     @Query('categoryId') categoryId?: string,
+    @Query('includeChildren') includeChildren?: string,
     @Query('skip') skip?: string,
     @Query('take') take?: string,
   ) {
     return this.articlesService.listPublished({
       categoryId,
+      includeChildren: includeChildren === 'true',
       skip: skip ? Number(skip) : undefined,
       take: take ? Number(take) : undefined,
     });

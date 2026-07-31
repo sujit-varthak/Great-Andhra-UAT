@@ -243,9 +243,28 @@ export class ArticlesService {
 
   // --- Public content API (published articles only, no auth) ---
 
-  async listPublished(filters: { categoryId?: string; skip?: number; take?: number }) {
+  async listPublished(filters: {
+    categoryId?: string;
+    includeChildren?: boolean;
+    skip?: number;
+    take?: number;
+  }) {
+    // includeChildren=true widens categoryId to itself + its direct children
+    // (categories are never nested more than one level deep) so a parent
+    // category's listing page can show its own articles plus every
+    // subcategory's. Default (absent/false) stays exact-match - an existing
+    // section relies on that against a category that itself has children.
+    let categoryFilter: string | { in: string[] } | undefined = filters.categoryId;
+    if (filters.categoryId && filters.includeChildren) {
+      const children = await this.prisma.category.findMany({
+        where: { parentId: filters.categoryId },
+        select: { id: true },
+      });
+      categoryFilter = { in: [filters.categoryId, ...children.map((c) => c.id)] };
+    }
+
     const items = await this.prisma.article.findMany({
-      where: { status: 'PUBLISHED', categoryId: filters.categoryId },
+      where: { status: 'PUBLISHED', categoryId: categoryFilter },
       include: articleInclude,
       orderBy: { publishedAt: 'desc' },
       skip: filters.skip ?? 0,
@@ -254,11 +273,18 @@ export class ArticlesService {
     return items.map(withUrlPath);
   }
 
-  async findPublishedById(id: string) {
-    const article = await this.prisma.article.findFirst({
-      where: { id, status: 'PUBLISHED' },
-      include: articleInclude,
-    });
+  private static readonly UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  // Accepts either the article's UUID or its short numeric id - the urlPath
+  // field is built from shortId specifically so it can be a clean, shareable
+  // URL instead of exposing the UUID; this is what makes that link resolve.
+  async findPublishedById(idOrShortId: string) {
+    const where = ArticlesService.UUID_RE.test(idOrShortId)
+      ? { id: idOrShortId, status: 'PUBLISHED' as const }
+      : { shortId: Number(idOrShortId), status: 'PUBLISHED' as const };
+
+    const article = await this.prisma.article.findFirst({ where, include: articleInclude });
     if (!article) throw new NotFoundException('Article not found');
     return withUrlPath(article);
   }

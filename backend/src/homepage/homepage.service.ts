@@ -31,7 +31,7 @@ export class HomepageService {
     talkOfTheTown: () => this.articlesService.findTalkOfTheTownFeed(5),
     featured: () => this.articlesService.findFeaturedFeed(5),
     usaMovieSchedule: () => this.usaMovieScheduleService.listActive(4),
-    trendingTags: () => this.tagsService.findTrendingTags(7, 15),
+    trendingTags: () => this.tagsService.findTrendingTags(undefined, 15),
   };
 
   // Each section is fetched independently so one failing section doesn't take
