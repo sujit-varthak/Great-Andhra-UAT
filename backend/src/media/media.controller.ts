@@ -21,6 +21,7 @@ import { AccessTokenPayload } from '../auth/interfaces/jwt-payload.interface';
 import { MediaService } from './media.service';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_UPLOAD_BYTES = 100 * 1024 * 1024;
 
 @Controller('media')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -42,6 +43,22 @@ export class MediaController {
   ) {
     if (!file) throw new BadRequestException('No file uploaded');
     return this.mediaService.uploadImage(actor.sub, file.buffer, req.ip);
+  }
+
+  @Post('upload-video')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_VIDEO_UPLOAD_BYTES },
+    }),
+  )
+  uploadVideo(
+    @CurrentUser() actor: AccessTokenPayload,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: Request,
+  ) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    return this.mediaService.uploadVideo(actor.sub, file.buffer, req.ip);
   }
 
   @Get('library')

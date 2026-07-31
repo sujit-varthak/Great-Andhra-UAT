@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { fromBuffer as fileTypeFromBuffer } from 'file-type';
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
@@ -9,8 +9,12 @@ import { PrismaService } from '../prisma/prisma.service';
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const MAX_DIMENSION = 4000;
 
+const ALLOWED_VIDEO_MIME_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
+
 @Injectable()
 export class MediaService {
+  private readonly logger = new Logger(MediaService.name);
+
   constructor(
     private readonly storageService: VercelBlobService,
     private readonly auditService: AuditService,
@@ -34,7 +38,7 @@ export class MediaService {
       .toBuffer();
 
     const key = `uploads/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.webp`;
-    const url = await this.storageService.upload(key, reencoded, 'image/webp');
+    const url = await this.uploadToStorage(key, reencoded, 'image/webp');
 
     await this.auditService.record({
       actorId,
@@ -46,6 +50,44 @@ export class MediaService {
     });
 
     return { url, key };
+  }
+
+  // Video: same magic-byte validation as images, but no re-encoding (that
+  // would need ffmpeg, out of scope) - the validated raw buffer is uploaded
+  // as-is under its detected extension.
+  async uploadVideo(actorId: string, buffer: Buffer, ipAddress?: string) {
+    const detected = await fileTypeFromBuffer(buffer);
+    if (!detected || !ALLOWED_VIDEO_MIME_TYPES.has(detected.mime)) {
+      throw new BadRequestException('Unsupported or unrecognized video file');
+    }
+
+    const key = `uploads/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.${detected.ext}`;
+    const url = await this.uploadToStorage(key, buffer, detected.mime);
+
+    await this.auditService.record({
+      actorId,
+      action: 'CREATE',
+      entity: 'MediaUpload',
+      entityId: key,
+      after: { key, url, originalMime: detected.mime, sizeBytes: buffer.length },
+      ipAddress,
+    });
+
+    return { url, key };
+  }
+
+  // The storage layer's own errors (e.g. missing/invalid credentials, an
+  // outage) were previously left to propagate uncaught, surfacing as an
+  // opaque "Internal server error" with zero context to whoever's uploading.
+  private async uploadToStorage(key: string, body: Buffer, contentType: string): Promise<string> {
+    try {
+      return await this.storageService.upload(key, body, contentType);
+    } catch (err) {
+      this.logger.error(`Storage upload failed for ${key}`, err as Error);
+      throw new ServiceUnavailableException(
+        'Media storage is currently unavailable. Please try again shortly.',
+      );
+    }
   }
 
   // Media library: every article that currently has a featured image,
