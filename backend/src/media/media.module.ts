@@ -9,5 +9,6 @@ import { AuditModule } from '../audit/audit.module';
   imports: [AuthGuardsModule, AuditModule],
   controllers: [MediaController],
   providers: [MediaService, VercelBlobService],
+  exports: [MediaService],
 })
 export class MediaModule {}

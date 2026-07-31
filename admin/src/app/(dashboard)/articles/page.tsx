@@ -76,9 +76,14 @@ export default function ArticlesListPage() {
     <div>
       <div className="page-header">
         <h1>Articles</h1>
-        <Link href="/articles/new" className="btn btn-primary">
-          New Article
-        </Link>
+        <div className="toolbar" style={{ marginBottom: 0 }}>
+          <Link href="/articles/import" className="btn">
+            Import
+          </Link>
+          <Link href="/articles/new" className="btn btn-primary">
+            New Article
+          </Link>
+        </div>
       </div>
 
       <div className="toolbar">

@@ -147,6 +147,10 @@ model Article {
   isTalkOfTheTown   Boolean       @default(false)
   isFeatured        Boolean       @default(false)
 
+  // Original WordPress wp:post_id, set only on imported articles - lets a
+  // re-uploaded XML file skip posts already imported instead of duplicating.
+  legacyPostId      Int?          @unique
+
   status            ArticleStatus @default(DRAFT)
   scheduledAt       DateTime?
   publishedAt       DateTime?

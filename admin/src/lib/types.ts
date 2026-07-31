@@ -145,3 +145,25 @@ export interface AuditLogItem {
   afterJson: unknown;
   createdAt: string;
 }
+
+export interface ImportWarning {
+  legacyPostId: number;
+  title: string;
+  message: string;
+}
+
+export interface ImportPreview {
+  totalInFile: number;
+  willImport: number;
+  duplicatesSkipped: number;
+  newCategories: string[];
+  warnings: ImportWarning[];
+}
+
+export interface ImportResult {
+  totalInFile: number;
+  created: number;
+  duplicatesSkipped: number;
+  failed: number;
+  warnings: ImportWarning[];
+}
