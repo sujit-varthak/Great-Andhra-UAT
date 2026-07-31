@@ -107,7 +107,7 @@ async function main() {
             n.featured_image, n.seo_title, n.seo_description, n.is_hot,
             n.is_trending, n.is_top_five, n.is_mobile_visible, n.status,
             n.created_at, n.published_at, n.view_count,
-            s.cast_json, s.director, s.rating
+            s.director, s.rating, s.release_date
      FROM news n
      LEFT JOIN schema_data s ON s.news_id = n.id`, // TODO: confirm actual column names
   );
@@ -143,8 +143,15 @@ async function main() {
         publishedAt: row.published_at ?? null,
         viewCount: row.view_count ?? 0,
         schemaData:
-          row.cast_json || row.director || row.rating
-            ? { cast: row.cast_json ? JSON.parse(row.cast_json) : [], director: row.director, rating: row.rating }
+          row.rating || row.release_date
+            ? {
+                // TODO: legacy `director` holds the film director's name, not
+                // the movie title - confirm whether the recovered schema has
+                // a separate movie-name column before wiring this field up.
+                movieName: undefined,
+                rating: row.rating ?? undefined,
+                releaseDate: row.release_date ?? undefined,
+              }
             : undefined,
       },
     });

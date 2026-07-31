@@ -42,13 +42,9 @@ export function ArticleForm({ article }: Props) {
   const [scheduledAt, setScheduledAt] = useState(
     article?.scheduledAt ? article.scheduledAt.slice(0, 16) : '',
   );
-  const [cast, setCast] = useState(
-    Array.isArray((article?.schemaData as any)?.cast)
-      ? ((article?.schemaData as any).cast as string[]).join(', ')
-      : '',
-  );
-  const [director, setDirector] = useState((article?.schemaData as any)?.director ?? '');
+  const [movieName, setMovieName] = useState((article?.schemaData as any)?.movieName ?? '');
   const [movieRating, setMovieRating] = useState((article?.schemaData as any)?.rating ?? '');
+  const [releaseDate, setReleaseDate] = useState((article?.schemaData as any)?.releaseDate ?? '');
 
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -63,14 +59,11 @@ export function ArticleForm({ article }: Props) {
     setSaving(true);
 
     const schemaData =
-      cast || director || movieRating
+      movieName || movieRating || releaseDate
         ? {
-            cast: cast
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-            director: director || undefined,
+            movieName: movieName || undefined,
             rating: movieRating ? Number(movieRating) : undefined,
+            releaseDate: releaseDate || undefined,
           }
         : undefined;
 
@@ -268,8 +261,8 @@ export function ArticleForm({ article }: Props) {
         </p>
         <div className="field-row">
           <div className="field">
-            <label htmlFor="director">Director</label>
-            <input id="director" value={director} onChange={(e) => setDirector(e.target.value)} />
+            <label htmlFor="movieName">Movie name</label>
+            <input id="movieName" value={movieName} onChange={(e) => setMovieName(e.target.value)} />
           </div>
           <div className="field">
             <label htmlFor="movieRating">Rating (0-10)</label>
@@ -285,8 +278,13 @@ export function ArticleForm({ article }: Props) {
           </div>
         </div>
         <div className="field">
-          <label htmlFor="cast">Cast (comma-separated)</label>
-          <input id="cast" value={cast} onChange={(e) => setCast(e.target.value)} />
+          <label htmlFor="releaseDate">Release date</label>
+          <input
+            id="releaseDate"
+            type="date"
+            value={releaseDate}
+            onChange={(e) => setReleaseDate(e.target.value)}
+          />
         </div>
       </div>
 

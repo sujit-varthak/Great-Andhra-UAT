@@ -116,7 +116,7 @@ model ArticleTag {
   @@map("article_tags")
 }
 
-// Replaces `news`. schemaData carries the old `schema_data` movie/cast/review
+// Replaces `news`. schemaData carries the old `schema_data` movie/review
 // fields as a flexible JSON blob rather than a rigid separate table.
 model Article {
   id                String        @id @default(uuid())
@@ -157,7 +157,7 @@ model Article {
 
   viewCount         Int           @default(0)
 
-  // Movie/review structured data: { cast: string[], director: string, rating: number, ... }
+  // Movie/review structured data: { movieName: string, rating: number, releaseDate: string, ... }
   schemaData        Json?
 
   ratings           Rating[]
