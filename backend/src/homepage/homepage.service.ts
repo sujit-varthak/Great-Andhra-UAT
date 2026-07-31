@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ArticlesService } from '../articles/articles.service';
 import { UsaMovieScheduleService } from '../usa-movie-schedule/usa-movie-schedule.service';
+import { TagsService } from '../tags/tags.service';
 
 type ArticleSummary = { id: string }[];
 
@@ -11,6 +12,7 @@ export class HomepageService {
   constructor(
     private readonly articlesService: ArticlesService,
     private readonly usaMovieScheduleService: UsaMovieScheduleService,
+    private readonly tagsService: TagsService,
   ) {}
 
   // Every plain "latest N articles in category X" section lives here — add a
@@ -29,6 +31,7 @@ export class HomepageService {
     talkOfTheTown: () => this.articlesService.findTalkOfTheTownFeed(5),
     featured: () => this.articlesService.findFeaturedFeed(5),
     usaMovieSchedule: () => this.usaMovieScheduleService.listActive(4),
+    trendingTags: () => this.tagsService.findTrendingTags(7, 15),
   };
 
   // Each section is fetched independently so one failing section doesn't take

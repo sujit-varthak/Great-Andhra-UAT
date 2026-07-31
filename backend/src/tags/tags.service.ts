@@ -81,6 +81,34 @@ export class TagsService {
     return { items, total };
   }
 
+  // Homepage "trending tags": ranked by PUBLISHED-article count within a
+  // recent day-range window - unlike listWithStats, this ranks across every
+  // tag by count (not by name), so it groups from the article-tag side
+  // first, then fetches only the top N tags' details.
+  async findTrendingTags(days = 7, take = 15) {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const grouped = await this.prisma.articleTag.groupBy({
+      by: ['tagId'],
+      where: { article: { status: 'PUBLISHED', publishedAt: { gte: cutoff } } },
+      _count: { articleId: true },
+      orderBy: { _count: { articleId: 'desc' } },
+      take,
+    });
+
+    if (grouped.length === 0) return [];
+
+    const tags = await this.prisma.tag.findMany({ where: { id: { in: grouped.map((g) => g.tagId) } } });
+    const tagById = new Map(tags.map((t) => [t.id, t]));
+
+    return grouped
+      .map((g) => {
+        const tag = tagById.get(g.tagId);
+        return tag ? { ...tag, articleCount: g._count.articleId } : null;
+      })
+      .filter((t): t is NonNullable<typeof t> => t !== null);
+  }
+
   async create(actorId: string, name: string) {
     const slug = slugify(name, { lower: true, strict: true });
     const existing = await this.prisma.tag.findUnique({ where: { slug } });
