@@ -347,7 +347,7 @@ export class ArticlesService {
   }
 
   findTelanganaNewsFeed(take = 5) {
-    return this.findByCategoryPath('telengana-news', 'politics', take);
+    return this.findByCategoryPath('telangana-news', 'politics', take);
   }
 
   findPoliticsGossipFeed(take = 5) {
