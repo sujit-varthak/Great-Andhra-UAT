@@ -155,6 +155,17 @@ export function RichTextEditor({ value, onChange }: Props) {
     }
   }
 
+  // Escape hatch for anything the URL-detection path doesn't cover - Twitter/X,
+  // Instagram, maps, or a YouTube/Vimeo embed code copied straight from their
+  // own "Share > Embed" button. Inserted verbatim, no parsing - the author is
+  // trusted to paste a real embed snippet, same trust level the rest of this
+  // editor already assumes (there's no body sanitization on save either).
+  function handleEmbedClick() {
+    saveSelection();
+    const html = window.prompt('Paste embed code (iframe/HTML snippet)');
+    if (html) insertHtmlAtSavedSelection(html);
+  }
+
   return (
     <div>
       <div className="rich-editor-toolbar">
@@ -184,6 +195,9 @@ export function RichTextEditor({ value, onChange }: Props) {
         </button>
         <button type="button" disabled={uploading} onClick={handleVideoClick}>
           Video
+        </button>
+        <button type="button" onClick={handleEmbedClick}>
+          Embed
         </button>
         <input
           ref={imageInputRef}
