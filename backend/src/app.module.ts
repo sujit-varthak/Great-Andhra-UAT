@@ -13,6 +13,8 @@ import { ArticlesModule } from './articles/articles.module';
 import { FlashNewsModule } from './flash-news/flash-news.module';
 import { TrendingModule } from './trending/trending.module';
 import { UsaMovieScheduleModule } from './usa-movie-schedule/usa-movie-schedule.module';
+import { WeeklyTopFiveModule } from './weekly-top-five/weekly-top-five.module';
+import { MovieBoxOfficeModule } from './movie-box-office/movie-box-office.module';
 import { DontMissModule } from './dont-miss/dont-miss.module';
 import { EpaperModule } from './epaper/epaper.module';
 import { RatingsModule } from './ratings/ratings.module';
@@ -35,6 +37,8 @@ import { HomepageModule } from './homepage/homepage.module';
     FlashNewsModule,
     TrendingModule,
     UsaMovieScheduleModule,
+    WeeklyTopFiveModule,
+    MovieBoxOfficeModule,
     DontMissModule,
     EpaperModule,
     RatingsModule,

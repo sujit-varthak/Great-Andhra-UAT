@@ -19,6 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/flash-news', label: 'Flash News' },
   { href: '/trending', label: 'Trending' },
   { href: '/usa-movie-schedule', label: 'USA Movie Schedule' },
+  { href: '/movie-rankings', label: 'Movie Rankings' },
   { href: '/dont-miss', label: "Don't Miss" },
   { href: '/epaper', label: 'E-Paper' },
   { href: '/media', label: 'Media Library' },

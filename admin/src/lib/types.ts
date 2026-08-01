@@ -110,6 +110,28 @@ export interface UsaMovieScheduleItem {
   sortOrder: number;
 }
 
+export interface WeeklyTopFiveItem {
+  id: string;
+  title: string;
+  linkUrl: string;
+  openInNewTab: boolean;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export type MovieBoxOfficeSection = 'ALL_TIME' | 'USA_BOX_OFFICE';
+
+export interface MovieBoxOfficeItem {
+  id: string;
+  section: MovieBoxOfficeSection;
+  movieName: string;
+  linkUrl: string;
+  amount: string;
+  openInNewTab: boolean;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export interface DontMissItem {
   id: string;
   title: string;

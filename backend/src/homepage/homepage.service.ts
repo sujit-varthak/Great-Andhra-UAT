@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { MovieBoxOfficeSection } from '@prisma/client';
 import { ArticlesService } from '../articles/articles.service';
 import { UsaMovieScheduleService } from '../usa-movie-schedule/usa-movie-schedule.service';
+import { WeeklyTopFiveService } from '../weekly-top-five/weekly-top-five.service';
+import { MovieBoxOfficeService } from '../movie-box-office/movie-box-office.service';
 import { TagsService } from '../tags/tags.service';
 
 type ArticleSummary = { id: string }[];
@@ -12,6 +15,8 @@ export class HomepageService {
   constructor(
     private readonly articlesService: ArticlesService,
     private readonly usaMovieScheduleService: UsaMovieScheduleService,
+    private readonly weeklyTopFiveService: WeeklyTopFiveService,
+    private readonly movieBoxOfficeService: MovieBoxOfficeService,
     private readonly tagsService: TagsService,
   ) {}
 
@@ -31,6 +36,9 @@ export class HomepageService {
     talkOfTheTown: () => this.articlesService.findTalkOfTheTownFeed(5),
     featured: () => this.articlesService.findFeaturedFeed(5),
     usaMovieSchedule: () => this.usaMovieScheduleService.listActive(4),
+    weeklyTopFive: () => this.weeklyTopFiveService.listActive(5),
+    allTimeTopFilms: () => this.movieBoxOfficeService.listActive(MovieBoxOfficeSection.ALL_TIME, 5),
+    usaBoxOffice: () => this.movieBoxOfficeService.listActive(MovieBoxOfficeSection.USA_BOX_OFFICE, 5),
     trendingTags: () => this.tagsService.findTrendingTags(undefined, 15),
   };
 

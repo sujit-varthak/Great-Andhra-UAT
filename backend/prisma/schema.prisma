@@ -213,6 +213,44 @@ model UsaMovieSchedule {
   @@map("usa_movie_schedule")
 }
 
+// Curated "This Week Top 5" links for the homepage - not tied to Article.
+model WeeklyTopFive {
+  id           String   @id @default(uuid())
+  title        String
+  linkUrl      String
+  openInNewTab Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("weekly_top_five")
+}
+
+enum MovieBoxOfficeSection {
+  ALL_TIME
+  USA_BOX_OFFICE
+}
+
+// Curated box-office rankings for the homepage - covers both "All Time Top
+// Films" and "USA Box Office" sections, distinguished by `section`, since
+// both have identical fields (movie name + link + amount).
+model MovieBoxOffice {
+  id           String                @id @default(uuid())
+  section      MovieBoxOfficeSection
+  movieName    String
+  linkUrl      String
+  amount       String
+  openInNewTab Boolean               @default(false)
+  isActive     Boolean               @default(true)
+  sortOrder    Int                   @default(0)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@index([section])
+  @@map("movie_box_office")
+}
+
 // Replaces `dontmiss`.
 model DontMiss {
   id        String   @id @default(uuid())
