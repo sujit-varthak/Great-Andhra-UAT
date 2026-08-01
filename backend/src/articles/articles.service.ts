@@ -246,6 +246,7 @@ export class ArticlesService {
   async listPublished(filters: {
     categoryId?: string;
     includeChildren?: boolean;
+    tagId?: string;
     skip?: number;
     take?: number;
   }) {
@@ -263,7 +264,11 @@ export class ArticlesService {
       categoryFilter = { in: [filters.categoryId, ...children.map((c) => c.id)] };
     }
 
-    const where = { status: 'PUBLISHED' as const, categoryId: categoryFilter };
+    const where = {
+      status: 'PUBLISHED' as const,
+      categoryId: categoryFilter,
+      ...(filters.tagId ? { tags: { some: { tagId: filters.tagId } } } : {}),
+    };
     const [items, total] = await Promise.all([
       this.prisma.article.findMany({
         where,

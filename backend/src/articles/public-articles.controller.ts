@@ -12,12 +12,14 @@ export class PublicArticlesController {
   list(
     @Query('categoryId') categoryId?: string,
     @Query('includeChildren') includeChildren?: string,
+    @Query('tagId') tagId?: string,
     @Query('skip') skip?: string,
     @Query('take') take?: string,
   ) {
     return this.articlesService.listPublished({
       categoryId,
       includeChildren: includeChildren === 'true',
+      tagId,
       skip: skip ? Number(skip) : undefined,
       take: take ? Number(take) : undefined,
     });
