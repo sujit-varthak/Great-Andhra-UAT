@@ -58,6 +58,7 @@ model User {
   refreshTokens     RefreshToken[]
   articles          Article[]
   auditLogs         AuditLog[]
+  advertisements    Advertisement[] @relation("advertisement_creator")
 
   @@map("users")
 }
@@ -306,4 +307,76 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([actorId])
   @@map("audit_logs")
+}
+
+enum AdType {
+  IMAGE
+  SCRIPT
+}
+
+enum AdZone {
+  // Homepage
+  HOMEPAGE_SIDEBAR_LEFT
+  HOMEPAGE_SIDEBAR_RIGHT
+  HOMEPAGE_TOP_BANNER
+  HOMEPAGE_SECTION_INLINE
+  HOMEPAGE_MOBILE_BANNER
+
+  // Inner Page (Article Detail)
+  INNER_SIDEBAR_LEFT
+  INNER_SIDEBAR_RIGHT
+  INNER_TOP_BANNER
+  INNER_MOBILE_BANNER
+
+  // Box Office
+  BOXOFFICE_SIDEBAR_LEFT
+  BOXOFFICE_SIDEBAR_RIGHT
+  BOXOFFICE_TOP_BANNER
+  BOXOFFICE_MOBILE_BANNER
+
+  // Roadblock (full-page interstitial)
+  ROADBLOCK
+}
+
+model Advertisement {
+  id                String    @id @default(uuid())
+  name              String    @db.VarChar(255)
+
+  // Type & Content
+  type              AdType    @default(IMAGE)
+
+  // IMAGE fields (shown when type = IMAGE)
+  imageUrlDesktop   String?   @db.Text
+  imageUrlMobile    String?   @db.Text
+  landingUrl        String?   @db.Text
+
+  // SCRIPT fields (shown when type = SCRIPT)
+  scriptCode        String?   @db.Text
+
+  // Placement & Visibility
+  zone              AdZone
+  showOnDesktop     Boolean   @default(true)
+  showOnMobile      Boolean   @default(true)
+
+  // Roadblock-specific
+  isRoadblock       Boolean   @default(false)
+  roadblockDelayMs  Int       @default(15000)
+  roadblockCookieTTL Int      @default(900)
+
+  // Scheduling
+  isActive          Boolean   @default(true)
+  startDate         DateTime  @default(now())
+  endDate           DateTime?
+
+  // Rotation
+  sortOrder         Int       @default(0)
+
+  // Audit
+  createdBy         String
+  createdByUser     User?     @relation("advertisement_creator", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([zone, isActive, startDate, endDate])
+  @@map("advertisements")
 }

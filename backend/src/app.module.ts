@@ -21,6 +21,7 @@ import { RatingsModule } from './ratings/ratings.module';
 import { MediaModule } from './media/media.module';
 import { SearchModule } from './search/search.module';
 import { HomepageModule } from './homepage/homepage.module';
+import { AdvertisementsModule } from './advertisements/advertisements.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { HomepageModule } from './homepage/homepage.module';
     MediaModule,
     SearchModule,
     HomepageModule,
+    AdvertisementsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
