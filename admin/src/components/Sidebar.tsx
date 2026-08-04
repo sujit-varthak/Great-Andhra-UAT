@@ -23,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dont-miss', label: "Don't Miss" },
   { href: '/epaper', label: 'E-Paper' },
   { href: '/media', label: 'Media Library' },
+  { href: '/advertisements', label: 'Advertisements', roles: ['ADMIN', 'EDITOR'] },
   { href: '/users', label: 'Users & Roles', roles: ['ADMIN'] },
   { href: '/audit-log', label: 'Audit Log', roles: ['ADMIN'] },
 ];
