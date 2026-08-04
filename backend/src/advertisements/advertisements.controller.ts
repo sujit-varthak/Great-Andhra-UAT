@@ -83,7 +83,7 @@ export class AdvertisementsController {
   }
 }
 
-@Controller('api/public/advertisements')
+@Controller('public/advertisements')
 export class PublicAdvertisementsController {
   constructor(private readonly advertisementsService: AdvertisementsService) {}
 
