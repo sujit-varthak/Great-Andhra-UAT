@@ -237,7 +237,9 @@ export default function AdvertisementsListPage() {
                   <input
                     type="checkbox"
                     checked={selectedIds.length === ads.length && ads.length > 0}
-                    indeterminate={selectedIds.length > 0 && selectedIds.length < ads.length}
+                    ref={(el) => {
+                      if (el) el.indeterminate = selectedIds.length > 0 && selectedIds.length < ads.length;
+                    }}
                     onChange={toggleSelectAll}
                   />
                 </th>

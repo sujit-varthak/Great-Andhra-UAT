@@ -75,48 +75,9 @@ export function AdvertisementForm({ advertisement }: Props) {
   // State
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [uploadingDesktop, setUploadingDesktop] = useState(false);
-  const [uploadingMobile, setUploadingMobile] = useState(false);
 
   const zoneDimensions = AD_ZONE_DIMENSIONS[zone];
   const isRoadblockZone = zone === 'ROADBLOCK';
-
-  async function handleImageUpload(file: File, isMobile: boolean) {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    if (isMobile) {
-      setUploadingMobile(true);
-    } else {
-      setUploadingDesktop(true);
-    }
-
-    try {
-      const result = await apiFetch<{ url: string }>('/media/upload', {
-        method: 'POST',
-        body: formData,
-        isForm: true,
-      });
-
-      if (isMobile) {
-        setImageUrlMobile(result.url);
-      } else {
-        setImageUrlDesktop(result.url);
-      }
-    } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : `Failed to upload ${isMobile ? 'mobile' : 'desktop'} image`,
-      );
-    } finally {
-      if (isMobile) {
-        setUploadingMobile(false);
-      } else {
-        setUploadingDesktop(false);
-      }
-    }
-  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -254,23 +215,19 @@ export function AdvertisementForm({ advertisement }: Props) {
         {/* IMAGE Type */}
         {type === 'IMAGE' && (
           <>
-            <div className="field">
-              <label>Desktop Image</label>
+            <div>
               <ImageUploader
-                onUpload={(file) => handleImageUpload(file, false)}
-                loading={uploadingDesktop}
-                imageUrl={imageUrlDesktop}
-                onRemove={() => setImageUrlDesktop(null)}
+                value={imageUrlDesktop}
+                onChange={setImageUrlDesktop}
+                label="Desktop Image"
               />
             </div>
 
-            <div className="field">
-              <label>Mobile Image</label>
+            <div>
               <ImageUploader
-                onUpload={(file) => handleImageUpload(file, true)}
-                loading={uploadingMobile}
-                imageUrl={imageUrlMobile}
-                onRemove={() => setImageUrlMobile(null)}
+                value={imageUrlMobile}
+                onChange={setImageUrlMobile}
+                label="Mobile Image"
               />
             </div>
 
