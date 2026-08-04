@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AccessTokenPayload } from '../auth/interfaces/jwt-payload.interface';
 import { AdZone } from '@prisma/client';
 
 @Controller('advertisements')
@@ -16,8 +17,8 @@ export class AdvertisementsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'EDITOR')
-  create(@Body() dto: CreateAdvertisementDto, @CurrentUser() user: any) {
-    return this.advertisementsService.create(dto, user.id);
+  create(@Body() dto: CreateAdvertisementDto, @CurrentUser() user: AccessTokenPayload) {
+    return this.advertisementsService.create(dto, user.sub);
   }
 
   @Get()
@@ -52,23 +53,23 @@ export class AdvertisementsController {
   update(
     @Param('id') id: string,
     @Body() dto: UpdateAdvertisementDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AccessTokenPayload,
   ) {
-    return this.advertisementsService.update(id, dto, user.id);
+    return this.advertisementsService.update(id, dto, user.sub);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'EDITOR')
-  delete(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.advertisementsService.delete(id, user.id);
+  delete(@Param('id') id: string, @CurrentUser() user: AccessTokenPayload) {
+    return this.advertisementsService.delete(id, user.sub);
   }
 
   @Post('bulk-delete')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'EDITOR')
-  bulkDelete(@Body() body: { ids: string[] }, @CurrentUser() user: any) {
-    return this.advertisementsService.bulkDelete(body.ids, user.id);
+  bulkDelete(@Body() body: { ids: string[] }, @CurrentUser() user: AccessTokenPayload) {
+    return this.advertisementsService.bulkDelete(body.ids, user.sub);
   }
 
   @Patch('bulk-update-active')
@@ -76,9 +77,9 @@ export class AdvertisementsController {
   @Roles('ADMIN', 'EDITOR')
   bulkUpdateActive(
     @Body() body: { ids: string[]; isActive: boolean },
-    @CurrentUser() user: any,
+    @CurrentUser() user: AccessTokenPayload,
   ) {
-    return this.advertisementsService.bulkUpdateActive(body.ids, body.isActive, user.id);
+    return this.advertisementsService.bulkUpdateActive(body.ids, body.isActive, user.sub);
   }
 }
 
