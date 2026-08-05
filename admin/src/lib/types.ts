@@ -198,6 +198,11 @@ export type AdZone =
   | 'HOMEPAGE_TOP_BANNER'
   | 'HOMEPAGE_SECTION_INLINE'
   | 'HOMEPAGE_MOBILE_BANNER'
+  | 'HOMEPAGE_ABOVE_HEADER_BANNER'
+  | 'HOMEPAGE_STRIP_BANNER_1'
+  | 'HOMEPAGE_STRIP_BANNER_2'
+  | 'HOMEPAGE_STRIP_BANNER_3'
+  | 'HOMEPAGE_BIG_STORY_BANNER'
   | 'INNER_SIDEBAR_LEFT'
   | 'INNER_SIDEBAR_RIGHT'
   | 'INNER_TOP_BANNER'
@@ -214,6 +219,11 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   HOMEPAGE_TOP_BANNER: 'Homepage - Top Banner',
   HOMEPAGE_SECTION_INLINE: 'Homepage - Section Inline (All Categories)',
   HOMEPAGE_MOBILE_BANNER: 'Homepage - Mobile Banner',
+  HOMEPAGE_ABOVE_HEADER_BANNER: 'Homepage - Above Header Banner (990px, top of page)',
+  HOMEPAGE_STRIP_BANNER_1: 'Homepage - Strip Banner 1 (left, below header)',
+  HOMEPAGE_STRIP_BANNER_2: 'Homepage - Strip Banner 2 (middle, below header)',
+  HOMEPAGE_STRIP_BANNER_3: 'Homepage - Strip Banner 3 (right, below header)',
+  HOMEPAGE_BIG_STORY_BANNER: 'Homepage - Big Story Banner (below hero)',
   INNER_SIDEBAR_LEFT: 'Article Page - Sidebar Left',
   INNER_SIDEBAR_RIGHT: 'Article Page - Sidebar Right',
   INNER_TOP_BANNER: 'Article Page - Top Banner',
@@ -231,6 +241,11 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   HOMEPAGE_TOP_BANNER: { width: '728px or 990px', height: '90px' },
   HOMEPAGE_SECTION_INLINE: { width: '330px', height: '200px' },
   HOMEPAGE_MOBILE_BANNER: { width: '380px', height: '250px' },
+  HOMEPAGE_ABOVE_HEADER_BANNER: { width: '990px', height: 'any' },
+  HOMEPAGE_STRIP_BANNER_1: { width: '330px', height: '40px' },
+  HOMEPAGE_STRIP_BANNER_2: { width: '330px', height: '40px' },
+  HOMEPAGE_STRIP_BANNER_3: { width: '300px', height: '40px' },
+  HOMEPAGE_BIG_STORY_BANNER: { width: '320px', height: 'any' },
   INNER_SIDEBAR_LEFT: { width: '160px', height: 'any' },
   INNER_SIDEBAR_RIGHT: { width: '160px', height: 'any' },
   INNER_TOP_BANNER: { width: '728px', height: '90px' },
