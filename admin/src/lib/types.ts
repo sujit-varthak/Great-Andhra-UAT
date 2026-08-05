@@ -207,10 +207,12 @@ export type AdZone =
   | 'INNER_SIDEBAR_RIGHT'
   | 'INNER_TOP_BANNER'
   | 'INNER_MOBILE_BANNER'
+  | 'INNER_ARTICLE_BANNER'
   | 'BOXOFFICE_SIDEBAR_LEFT'
   | 'BOXOFFICE_SIDEBAR_RIGHT'
   | 'BOXOFFICE_TOP_BANNER'
   | 'BOXOFFICE_MOBILE_BANNER'
+  | 'LISTPAGE_CONTENT_AD'
   | 'ROADBLOCK';
 
 export const AD_ZONE_LABELS: Record<AdZone, string> = {
@@ -228,10 +230,12 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   INNER_SIDEBAR_RIGHT: 'Article Page - Sidebar Right',
   INNER_TOP_BANNER: 'Article Page - Top Banner',
   INNER_MOBILE_BANNER: 'Article Page - Mobile Banner',
+  INNER_ARTICLE_BANNER: 'Article Page - In-Article Banner (below byline)',
   BOXOFFICE_SIDEBAR_LEFT: 'Box Office - Sidebar Left',
   BOXOFFICE_SIDEBAR_RIGHT: 'Box Office - Sidebar Right',
   BOXOFFICE_TOP_BANNER: 'Box Office - Top Banner',
   BOXOFFICE_MOBILE_BANNER: 'Box Office - Mobile Banner',
+  LISTPAGE_CONTENT_AD: 'List Page - In-Content Ad (category/tag pages)',
   ROADBLOCK: 'Roadblock (Full-page Interstitial)',
 };
 
@@ -250,10 +254,12 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   INNER_SIDEBAR_RIGHT: { width: '160px', height: 'any' },
   INNER_TOP_BANNER: { width: '728px', height: '90px' },
   INNER_MOBILE_BANNER: { width: '380px', height: '90px' },
+  INNER_ARTICLE_BANNER: { width: '650px', height: '60px' },
   BOXOFFICE_SIDEBAR_LEFT: { width: '160px', height: 'any' },
   BOXOFFICE_SIDEBAR_RIGHT: { width: '160px', height: 'any' },
   BOXOFFICE_TOP_BANNER: { width: '728px', height: '90px' },
   BOXOFFICE_MOBILE_BANNER: { width: '380px', height: '90px' },
+  LISTPAGE_CONTENT_AD: { width: '300px', height: '250px' },
   ROADBLOCK: { width: 'flexible', height: 'flexible' },
 };
 

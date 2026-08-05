@@ -10,25 +10,25 @@ interface Props {
   advertisement?: Advertisement;
 }
 
+// HOMEPAGE_MOBILE_BANNER, INNER_SIDEBAR_LEFT/RIGHT, INNER_TOP_BANNER, INNER_MOBILE_BANNER,
+// BOXOFFICE_TOP_BANNER, BOXOFFICE_MOBILE_BANNER intentionally omitted - the article page and
+// box office now reuse the homepage's own sidebar/top-banner ads (same ad, same content)
+// instead of being separately manageable. Not removed from AdZone/AD_ZONE_LABELS/
+// AD_ZONE_DIMENSIONS in lib/types.ts, so it's a one-line change to bring any of them back.
 const AD_ZONES: AdZone[] = [
   'HOMEPAGE_SIDEBAR_LEFT',
   'HOMEPAGE_SIDEBAR_RIGHT',
   'HOMEPAGE_TOP_BANNER',
   'HOMEPAGE_SECTION_INLINE',
-  'HOMEPAGE_MOBILE_BANNER',
   'HOMEPAGE_ABOVE_HEADER_BANNER',
   'HOMEPAGE_STRIP_BANNER_1',
   'HOMEPAGE_STRIP_BANNER_2',
   'HOMEPAGE_STRIP_BANNER_3',
   'HOMEPAGE_BIG_STORY_BANNER',
-  'INNER_SIDEBAR_LEFT',
-  'INNER_SIDEBAR_RIGHT',
-  'INNER_TOP_BANNER',
-  'INNER_MOBILE_BANNER',
+  'INNER_ARTICLE_BANNER',
   'BOXOFFICE_SIDEBAR_LEFT',
   'BOXOFFICE_SIDEBAR_RIGHT',
-  'BOXOFFICE_TOP_BANNER',
-  'BOXOFFICE_MOBILE_BANNER',
+  'LISTPAGE_CONTENT_AD',
   'ROADBLOCK',
 ];
 
