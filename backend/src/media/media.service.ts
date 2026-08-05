@@ -31,8 +31,10 @@ export class MediaService {
 
     // Re-encode through sharp: strips EXIF/embedded scripts, normalizes to
     // webp, and caps dimensions — the file that reaches storage is never the
-    // raw uploaded bytes.
-    const reencoded = await sharp(buffer)
+    // raw uploaded bytes. { animated: true } reads every frame of a multi-frame
+    // GIF/WebP input instead of just the first — without it, an animated ad
+    // banner GIF silently flattens into a single static frame.
+    const reencoded = await sharp(buffer, { animated: true })
       .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 85 })
       .toBuffer();
