@@ -203,11 +203,16 @@ export type AdZone =
   | 'HOMEPAGE_STRIP_BANNER_2'
   | 'HOMEPAGE_STRIP_BANNER_3'
   | 'HOMEPAGE_BIG_STORY_BANNER'
+  | 'HOMEPAGE_LATEST_NEWS_INLINE_AD'
+  | 'HOMEPAGE_OPINION_BANNER'
+  | 'HOMEPAGE_ARTICLE_WIDGET_AD'
   | 'INNER_SIDEBAR_LEFT'
   | 'INNER_SIDEBAR_RIGHT'
   | 'INNER_TOP_BANNER'
   | 'INNER_MOBILE_BANNER'
   | 'INNER_ARTICLE_BANNER'
+  | 'INNER_ARTICLE_MIDCONTENT_AD'
+  | 'INNER_SIDEBAR_BOTTOM_AD'
   | 'BOXOFFICE_SIDEBAR_LEFT'
   | 'BOXOFFICE_SIDEBAR_RIGHT'
   | 'BOXOFFICE_TOP_BANNER'
@@ -216,9 +221,9 @@ export type AdZone =
   | 'ROADBLOCK';
 
 export const AD_ZONE_LABELS: Record<AdZone, string> = {
-  HOMEPAGE_SIDEBAR_LEFT: 'Homepage - Sidebar Left',
-  HOMEPAGE_SIDEBAR_RIGHT: 'Homepage - Sidebar Right',
-  HOMEPAGE_TOP_BANNER: 'Homepage - Top Banner',
+  HOMEPAGE_SIDEBAR_LEFT: 'Site-Wide - Sidebar Left (Home, Article, List, Box Office)',
+  HOMEPAGE_SIDEBAR_RIGHT: 'Site-Wide - Sidebar Right (Home, Article, List, Box Office)',
+  HOMEPAGE_TOP_BANNER: 'Site-Wide - Top Banner (Home, Article, List, Box Office)',
   HOMEPAGE_SECTION_INLINE: 'Homepage - Section Inline (All Categories)',
   HOMEPAGE_MOBILE_BANNER: 'Homepage - Mobile Banner',
   HOMEPAGE_ABOVE_HEADER_BANNER: 'Homepage - Above Header Banner (990px, top of page)',
@@ -226,11 +231,16 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   HOMEPAGE_STRIP_BANNER_2: 'Homepage - Strip Banner 2 (middle, below header)',
   HOMEPAGE_STRIP_BANNER_3: 'Homepage - Strip Banner 3 (right, below header)',
   HOMEPAGE_BIG_STORY_BANNER: 'Homepage - Big Story Banner (below hero)',
+  HOMEPAGE_LATEST_NEWS_INLINE_AD: 'Homepage - Latest News Inline Ad (Phone View Only)',
+  HOMEPAGE_OPINION_BANNER: 'Homepage - Opinion Section Banner',
+  HOMEPAGE_ARTICLE_WIDGET_AD: 'Homepage - Article Widget Ad (right column)',
   INNER_SIDEBAR_LEFT: 'Article Page - Sidebar Left',
   INNER_SIDEBAR_RIGHT: 'Article Page - Sidebar Right',
   INNER_TOP_BANNER: 'Article Page - Top Banner',
   INNER_MOBILE_BANNER: 'Article Page - Mobile Banner',
   INNER_ARTICLE_BANNER: 'Article Page - In-Article Banner (below byline)',
+  INNER_ARTICLE_MIDCONTENT_AD: 'Article Page - Mid-Content Ad (within article body)',
+  INNER_SIDEBAR_BOTTOM_AD: 'Article Page - Sidebar Bottom Ad',
   BOXOFFICE_SIDEBAR_LEFT: 'Box Office - Sidebar Left',
   BOXOFFICE_SIDEBAR_RIGHT: 'Box Office - Sidebar Right',
   BOXOFFICE_TOP_BANNER: 'Box Office - Top Banner',
@@ -250,11 +260,16 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   HOMEPAGE_STRIP_BANNER_2: { width: '330px', height: '40px' },
   HOMEPAGE_STRIP_BANNER_3: { width: '300px', height: '40px' },
   HOMEPAGE_BIG_STORY_BANNER: { width: '320px', height: 'any' },
+  HOMEPAGE_LATEST_NEWS_INLINE_AD: { width: '300px', height: '250px' },
+  HOMEPAGE_OPINION_BANNER: { width: '728px', height: '90px' },
+  HOMEPAGE_ARTICLE_WIDGET_AD: { width: '300px', height: '250px' },
   INNER_SIDEBAR_LEFT: { width: '160px', height: 'any' },
   INNER_SIDEBAR_RIGHT: { width: '160px', height: 'any' },
   INNER_TOP_BANNER: { width: '728px', height: '90px' },
   INNER_MOBILE_BANNER: { width: '380px', height: '90px' },
   INNER_ARTICLE_BANNER: { width: '650px', height: '60px' },
+  INNER_ARTICLE_MIDCONTENT_AD: { width: '300px', height: '250px' },
+  INNER_SIDEBAR_BOTTOM_AD: { width: '300px', height: '250px' },
   BOXOFFICE_SIDEBAR_LEFT: { width: '160px', height: 'any' },
   BOXOFFICE_SIDEBAR_RIGHT: { width: '160px', height: 'any' },
   BOXOFFICE_TOP_BANNER: { width: '728px', height: '90px' },
