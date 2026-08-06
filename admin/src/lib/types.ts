@@ -268,7 +268,7 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   INNER_TOP_BANNER: { width: '728px', height: '90px' },
   INNER_MOBILE_BANNER: { width: '380px', height: '90px' },
   INNER_ARTICLE_BANNER: { width: '650px', height: '60px' },
-  INNER_ARTICLE_MIDCONTENT_AD: { width: '300px', height: '250px' },
+  INNER_ARTICLE_MIDCONTENT_AD: { width: 'full width', height: 'auto' },
   INNER_SIDEBAR_BOTTOM_AD: { width: '300px', height: '250px' },
   BOXOFFICE_SIDEBAR_LEFT: { width: '160px', height: 'any' },
   BOXOFFICE_SIDEBAR_RIGHT: { width: '160px', height: 'any' },
