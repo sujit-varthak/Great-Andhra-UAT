@@ -217,6 +217,8 @@ export type AdZone =
   | 'BOXOFFICE_SIDEBAR_RIGHT'
   | 'BOXOFFICE_TOP_BANNER'
   | 'BOXOFFICE_MOBILE_BANNER'
+  | 'BOXOFFICE_STICKY_AD'
+  | 'BOXOFFICE_REVIEW_AD'
   | 'LISTPAGE_CONTENT_AD'
   | 'ROADBLOCK';
 
@@ -245,6 +247,8 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   BOXOFFICE_SIDEBAR_RIGHT: 'Box Office - Sidebar Right',
   BOXOFFICE_TOP_BANNER: 'Box Office - Top Banner',
   BOXOFFICE_MOBILE_BANNER: 'Box Office - Mobile Banner',
+  BOXOFFICE_STICKY_AD: 'Box Office - Sticky Scroll Ad (stays fixed as user scrolls)',
+  BOXOFFICE_REVIEW_AD: 'Box Office - Review Ad',
   LISTPAGE_CONTENT_AD: 'List Page - In-Content Ad (category/tag pages)',
   ROADBLOCK: 'Roadblock (Full-page Interstitial)',
 };
@@ -274,6 +278,8 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   BOXOFFICE_SIDEBAR_RIGHT: { width: '160px', height: 'any' },
   BOXOFFICE_TOP_BANNER: { width: '728px', height: '90px' },
   BOXOFFICE_MOBILE_BANNER: { width: '380px', height: '90px' },
+  BOXOFFICE_STICKY_AD: { width: '300px', height: '250px' },
+  BOXOFFICE_REVIEW_AD: { width: '300px', height: '250px' },
   LISTPAGE_CONTENT_AD: { width: '300px', height: '250px' },
   ROADBLOCK: { width: 'flexible', height: 'flexible' },
 };
