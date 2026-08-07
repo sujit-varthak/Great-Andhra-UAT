@@ -220,14 +220,16 @@ export type AdZone =
   | 'BOXOFFICE_STICKY_AD'
   | 'BOXOFFICE_REVIEW_AD'
   | 'LISTPAGE_CONTENT_AD'
+  | 'LISTPAGE_TOP_BANNER'
+  | 'LISTPAGE_MOBILE_BANNER'
   | 'ROADBLOCK';
 
 export const AD_ZONE_LABELS: Record<AdZone, string> = {
-  HOMEPAGE_SIDEBAR_LEFT: 'Site-Wide - Sidebar Left (Home, Article, List, Box Office)',
-  HOMEPAGE_SIDEBAR_RIGHT: 'Site-Wide - Sidebar Right (Home, Article, List, Box Office)',
-  HOMEPAGE_TOP_BANNER: 'Site-Wide - Top Banner (Home, Article, List, Box Office)',
+  HOMEPAGE_SIDEBAR_LEFT: 'Homepage - Sidebar Left',
+  HOMEPAGE_SIDEBAR_RIGHT: 'Homepage - Sidebar Right',
+  HOMEPAGE_TOP_BANNER: 'Homepage - Top Banner (Desktop)',
   HOMEPAGE_SECTION_INLINE: 'Homepage - Section Inline (All Categories)',
-  HOMEPAGE_MOBILE_BANNER: 'Homepage - Mobile Banner',
+  HOMEPAGE_MOBILE_BANNER: 'Homepage - Top Banner (Mobile)',
   HOMEPAGE_ABOVE_HEADER_BANNER: 'Homepage - Above Header Banner (990px, top of page)',
   HOMEPAGE_STRIP_BANNER_1: 'Homepage - Strip Banner 1 (left, below header)',
   HOMEPAGE_STRIP_BANNER_2: 'Homepage - Strip Banner 2 (middle, below header)',
@@ -238,18 +240,20 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   HOMEPAGE_ARTICLE_WIDGET_AD: 'Homepage - Article Widget Ad (right column)',
   INNER_SIDEBAR_LEFT: 'Article Page - Sidebar Left',
   INNER_SIDEBAR_RIGHT: 'Article Page - Sidebar Right',
-  INNER_TOP_BANNER: 'Article Page - Top Banner',
-  INNER_MOBILE_BANNER: 'Article Page - Mobile Banner',
+  INNER_TOP_BANNER: 'Article Page - Top Banner (Desktop)',
+  INNER_MOBILE_BANNER: 'Article Page - Top Banner (Mobile)',
   INNER_ARTICLE_BANNER: 'Article Page - In-Article Banner (below byline)',
   INNER_ARTICLE_MIDCONTENT_AD: 'Article Page - Mid-Content Ad (within article body)',
   INNER_SIDEBAR_BOTTOM_AD: 'Article Page - Sidebar Bottom Ad',
   BOXOFFICE_SIDEBAR_LEFT: 'Box Office - Sidebar Left',
   BOXOFFICE_SIDEBAR_RIGHT: 'Box Office - Sidebar Right',
-  BOXOFFICE_TOP_BANNER: 'Box Office - Top Banner',
-  BOXOFFICE_MOBILE_BANNER: 'Box Office - Mobile Banner',
+  BOXOFFICE_TOP_BANNER: 'Box Office - Top Banner (Desktop)',
+  BOXOFFICE_MOBILE_BANNER: 'Box Office - Top Banner (Mobile)',
   BOXOFFICE_STICKY_AD: 'Box Office - Sticky Scroll Ad (stays fixed as user scrolls)',
   BOXOFFICE_REVIEW_AD: 'Box Office - Review Ad',
   LISTPAGE_CONTENT_AD: 'List Page - In-Content Ad (category/tag pages)',
+  LISTPAGE_TOP_BANNER: 'List Page - Top Banner (Desktop)',
+  LISTPAGE_MOBILE_BANNER: 'List Page - Top Banner (Mobile)',
   ROADBLOCK: 'Roadblock (Full-page Interstitial)',
 };
 
@@ -281,7 +285,53 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   BOXOFFICE_STICKY_AD: { width: '300px', height: '250px' },
   BOXOFFICE_REVIEW_AD: { width: '300px', height: '250px' },
   LISTPAGE_CONTENT_AD: { width: '300px', height: '250px' },
+  LISTPAGE_TOP_BANNER: { width: '728px', height: '90px' },
+  LISTPAGE_MOBILE_BANNER: { width: '380px', height: '90px' },
   ROADBLOCK: { width: 'flexible', height: 'flexible' },
+};
+
+// Which page each zone belongs to, for the Advertisements page's per-page tabs. A zone
+// appears in exactly one tab's dropdown - ROADBLOCK has no page tab (it's a full-page
+// interstitial, shown from its own "Roadblock" tab/section instead).
+export type AdPage = 'home' | 'inner' | 'boxoffice' | 'listpage';
+
+export const AD_ZONE_PAGE: Record<Exclude<AdZone, 'ROADBLOCK'>, AdPage> = {
+  HOMEPAGE_SIDEBAR_LEFT: 'home',
+  HOMEPAGE_SIDEBAR_RIGHT: 'home',
+  HOMEPAGE_TOP_BANNER: 'home',
+  HOMEPAGE_SECTION_INLINE: 'home',
+  HOMEPAGE_MOBILE_BANNER: 'home',
+  HOMEPAGE_ABOVE_HEADER_BANNER: 'home',
+  HOMEPAGE_STRIP_BANNER_1: 'home',
+  HOMEPAGE_STRIP_BANNER_2: 'home',
+  HOMEPAGE_STRIP_BANNER_3: 'home',
+  HOMEPAGE_BIG_STORY_BANNER: 'home',
+  HOMEPAGE_LATEST_NEWS_INLINE_AD: 'home',
+  HOMEPAGE_OPINION_BANNER: 'home',
+  HOMEPAGE_ARTICLE_WIDGET_AD: 'home',
+  INNER_SIDEBAR_LEFT: 'inner',
+  INNER_SIDEBAR_RIGHT: 'inner',
+  INNER_TOP_BANNER: 'inner',
+  INNER_MOBILE_BANNER: 'inner',
+  INNER_ARTICLE_BANNER: 'inner',
+  INNER_ARTICLE_MIDCONTENT_AD: 'inner',
+  INNER_SIDEBAR_BOTTOM_AD: 'inner',
+  BOXOFFICE_SIDEBAR_LEFT: 'boxoffice',
+  BOXOFFICE_SIDEBAR_RIGHT: 'boxoffice',
+  BOXOFFICE_TOP_BANNER: 'boxoffice',
+  BOXOFFICE_MOBILE_BANNER: 'boxoffice',
+  BOXOFFICE_STICKY_AD: 'boxoffice',
+  BOXOFFICE_REVIEW_AD: 'boxoffice',
+  LISTPAGE_CONTENT_AD: 'listpage',
+  LISTPAGE_TOP_BANNER: 'listpage',
+  LISTPAGE_MOBILE_BANNER: 'listpage',
+};
+
+export const AD_PAGE_LABELS: Record<AdPage, string> = {
+  home: 'Home Page',
+  inner: 'Inner Page',
+  boxoffice: 'Box Office',
+  listpage: 'List Page',
 };
 
 export interface Advertisement {

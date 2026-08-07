@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { AdvertisementForm } from '@/components/AdvertisementForm';
 
 export const metadata = {
@@ -10,7 +11,9 @@ export default function NewAdvertisementPage() {
       <div className="page-header">
         <h1>Create New Advertisement</h1>
       </div>
-      <AdvertisementForm />
+      <Suspense>
+        <AdvertisementForm />
+      </Suspense>
     </div>
   );
 }

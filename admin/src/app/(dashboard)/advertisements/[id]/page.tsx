@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { apiFetch, ApiError } from '@/lib/api';
 import { Advertisement } from '@/lib/types';
@@ -43,7 +43,9 @@ export default function EditAdvertisementPage() {
       <div className="page-header">
         <h1>Edit Advertisement</h1>
       </div>
-      <AdvertisementForm advertisement={ad} />
+      <Suspense>
+        <AdvertisementForm advertisement={ad} />
+      </Suspense>
     </div>
   );
 }

@@ -349,6 +349,8 @@ enum AdZone {
 
   // List Page (category/tag listings)
   LISTPAGE_CONTENT_AD
+  LISTPAGE_TOP_BANNER
+  LISTPAGE_MOBILE_BANNER
 
   // Roadblock (full-page interstitial)
   ROADBLOCK

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch, ApiError } from '@/lib/api';
 import { Advertisement, AdType, AdZone, AD_ZONE_LABELS, AD_ZONE_DIMENSIONS } from '@/lib/types';
 import { ImageUploader } from './ImageUploader';
@@ -10,15 +10,13 @@ interface Props {
   advertisement?: Advertisement;
 }
 
-// HOMEPAGE_MOBILE_BANNER, INNER_SIDEBAR_LEFT/RIGHT, INNER_TOP_BANNER, INNER_MOBILE_BANNER,
-// BOXOFFICE_TOP_BANNER, BOXOFFICE_MOBILE_BANNER intentionally omitted - the article page and
-// box office now reuse the homepage's own sidebar/top-banner ads (same ad, same content)
-// instead of being separately manageable. Not removed from AdZone/AD_ZONE_LABELS/
-// AD_ZONE_DIMENSIONS in lib/types.ts, so it's a one-line change to bring any of them back.
+// Every zone is independently manageable per page now - each page (home, article, box
+// office, list) has its own sidebar/top-banner zones instead of sharing one.
 const AD_ZONES: AdZone[] = [
   'HOMEPAGE_SIDEBAR_LEFT',
   'HOMEPAGE_SIDEBAR_RIGHT',
   'HOMEPAGE_TOP_BANNER',
+  'HOMEPAGE_MOBILE_BANNER',
   'HOMEPAGE_SECTION_INLINE',
   'HOMEPAGE_ABOVE_HEADER_BANNER',
   'HOMEPAGE_STRIP_BANNER_1',
@@ -28,40 +26,51 @@ const AD_ZONES: AdZone[] = [
   'HOMEPAGE_LATEST_NEWS_INLINE_AD',
   'HOMEPAGE_OPINION_BANNER',
   'HOMEPAGE_ARTICLE_WIDGET_AD',
+  'INNER_SIDEBAR_LEFT',
+  'INNER_SIDEBAR_RIGHT',
+  'INNER_TOP_BANNER',
+  'INNER_MOBILE_BANNER',
   'INNER_ARTICLE_BANNER',
   'INNER_ARTICLE_MIDCONTENT_AD',
   'INNER_SIDEBAR_BOTTOM_AD',
   'BOXOFFICE_SIDEBAR_LEFT',
   'BOXOFFICE_SIDEBAR_RIGHT',
+  'BOXOFFICE_TOP_BANNER',
+  'BOXOFFICE_MOBILE_BANNER',
   'BOXOFFICE_STICKY_AD',
   'BOXOFFICE_REVIEW_AD',
   'LISTPAGE_CONTENT_AD',
+  'LISTPAGE_TOP_BANNER',
+  'LISTPAGE_MOBILE_BANNER',
   'ROADBLOCK',
 ];
 
 export function AdvertisementForm({ advertisement }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isEdit = Boolean(advertisement);
+
+  // A zone in the URL (from "Add new ad" on a page tab) pre-selects it for a new ad; ignored
+  // once editing an existing ad, whose own zone always wins.
+  const zoneFromUrl = searchParams.get('zone') as AdZone | null;
 
   const [name, setName] = useState(advertisement?.name ?? '');
   const [type, setType] = useState<AdType>(advertisement?.type ?? 'IMAGE');
-  const [zone, setZone] = useState<AdZone>(advertisement?.zone ?? 'HOMEPAGE_SIDEBAR_LEFT');
-
-  // Image fields
-  const [imageUrlDesktop, setImageUrlDesktop] = useState<string | null>(
-    advertisement?.imageUrlDesktop ?? null,
+  const [zone, setZone] = useState<AdZone>(
+    advertisement?.zone ?? (zoneFromUrl && AD_ZONE_LABELS[zoneFromUrl] ? zoneFromUrl : 'HOMEPAGE_SIDEBAR_LEFT'),
   );
-  const [imageUrlMobile, setImageUrlMobile] = useState<string | null>(
-    advertisement?.imageUrlMobile ?? null,
+
+  // Image field - a zone is either a desktop placement or a mobile placement (never both
+  // anymore), so one image is enough; it's saved as imageUrlDesktop on the backend regardless
+  // of which kind of zone it is, and ga_render_ad() on the frontend already falls back to
+  // imageUrlDesktop when imageUrlMobile is unset for whichever device context it's rendering.
+  const [imageUrl, setImageUrl] = useState<string | null>(
+    advertisement?.imageUrlDesktop ?? advertisement?.imageUrlMobile ?? null,
   );
   const [landingUrl, setLandingUrl] = useState(advertisement?.landingUrl ?? '');
 
   // Script field
   const [scriptCode, setScriptCode] = useState(advertisement?.scriptCode ?? '');
-
-  // Visibility
-  const [showOnDesktop, setShowOnDesktop] = useState(advertisement?.showOnDesktop ?? true);
-  const [showOnMobile, setShowOnMobile] = useState(advertisement?.showOnMobile ?? true);
 
   // Roadblock
   const [isRoadblock, setIsRoadblock] = useState(advertisement?.isRoadblock ?? false);
@@ -102,8 +111,8 @@ export function AdvertisementForm({ advertisement }: Props) {
     }
 
     if (type === 'IMAGE') {
-      if (!imageUrlDesktop && !imageUrlMobile) {
-        setError('At least one image (desktop or mobile) is required');
+      if (!imageUrl) {
+        setError('An image is required');
         return;
       }
       if (!landingUrl.trim()) {
@@ -122,13 +131,14 @@ export function AdvertisementForm({ advertisement }: Props) {
     const payload = {
       name,
       type,
-      imageUrlDesktop: imageUrlDesktop || undefined,
-      imageUrlMobile: imageUrlMobile || undefined,
+      imageUrlDesktop: imageUrl || undefined,
       landingUrl: landingUrl || undefined,
       scriptCode: scriptCode || undefined,
       zone,
-      showOnDesktop,
-      showOnMobile,
+      // Every zone is now inherently a desktop zone or a mobile zone (there's no shared
+      // dual-purpose zone left) - always true, no longer a user-editable toggle.
+      showOnDesktop: true,
+      showOnMobile: true,
       isRoadblock: isRoadblockZone ? true : isRoadblock,
       roadblockDelayMs: isRoadblockZone ? roadblockDelayMs : undefined,
       roadblockCookieTTL: isRoadblockZone ? roadblockCookieTTL : undefined,
@@ -228,19 +238,7 @@ export function AdvertisementForm({ advertisement }: Props) {
         {type === 'IMAGE' && (
           <>
             <div>
-              <ImageUploader
-                value={imageUrlDesktop}
-                onChange={setImageUrlDesktop}
-                label="Desktop Image"
-              />
-            </div>
-
-            <div>
-              <ImageUploader
-                value={imageUrlMobile}
-                onChange={setImageUrlMobile}
-                label="Mobile Image"
-              />
+              <ImageUploader value={imageUrl} onChange={setImageUrl} label="Image" />
             </div>
 
             <div className="field">
@@ -271,31 +269,6 @@ export function AdvertisementForm({ advertisement }: Props) {
             <small>Paste the complete &lt;script&gt;...&lt;/script&gt; tag</small>
           </div>
         )}
-      </div>
-
-      {/* Visibility */}
-      <div className="card">
-        <h3>Visibility</h3>
-
-        <div className="field-row">
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={showOnDesktop}
-              onChange={(e) => setShowOnDesktop(e.target.checked)}
-            />
-            Show on Desktop
-          </label>
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={showOnMobile}
-              onChange={(e) => setShowOnMobile(e.target.checked)}
-            />
-            Show on Mobile
-          </label>
-        </div>
       </div>
 
       {/* Roadblock Settings */}
