@@ -3,7 +3,15 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch, ApiError } from '@/lib/api';
-import { Advertisement, AdType, AdZone, AD_ZONE_LABELS, AD_ZONE_DIMENSIONS } from '@/lib/types';
+import {
+  Advertisement,
+  AdType,
+  AdZone,
+  AD_ZONE_LABELS,
+  AD_ZONE_DIMENSIONS,
+  AD_ZONE_PAGE,
+  AD_ZONE_DEVICE,
+} from '@/lib/types';
 import { ImageUploader } from './ImageUploader';
 
 interface Props {
@@ -46,6 +54,21 @@ const AD_ZONES: AdZone[] = [
   'ROADBLOCK',
 ];
 
+// Zones that share the incoming zone's page and are compatible with its device (same
+// device, or either side is 'both') - used to scope the dropdown to "only zones relevant
+// to where this ad is being created from" instead of every zone on the whole site.
+function zonesScopedLike(reference: AdZone): AdZone[] {
+  if (reference === 'ROADBLOCK') return AD_ZONES;
+  const refPage = AD_ZONE_PAGE[reference];
+  const refDevice = AD_ZONE_DEVICE[reference];
+  return AD_ZONES.filter((z) => {
+    if (z === 'ROADBLOCK') return false;
+    if (AD_ZONE_PAGE[z] !== refPage) return false;
+    const zDevice = AD_ZONE_DEVICE[z];
+    return zDevice === refDevice || zDevice === 'both' || refDevice === 'both';
+  });
+}
+
 export function AdvertisementForm({ advertisement }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -54,6 +77,14 @@ export function AdvertisementForm({ advertisement }: Props) {
   // A zone in the URL (from "Add new ad" on a page tab) pre-selects it for a new ad; ignored
   // once editing an existing ad, whose own zone always wins.
   const zoneFromUrl = searchParams.get('zone') as AdZone | null;
+
+  // Creating a new ad from a specific page/device tab (via "+ Add New Ad for This Zone")
+  // scopes the dropdown to just that page+device's zones, so you can't accidentally pick a
+  // zone from an unrelated page or the wrong device. Editing an existing ad, or landing here
+  // with no zone context (the plain "New Advertisement" button), keeps the full list so an
+  // ad can still be moved to any zone.
+  const zoneOptions: AdZone[] =
+    !advertisement && zoneFromUrl && AD_ZONE_LABELS[zoneFromUrl] ? zonesScopedLike(zoneFromUrl) : AD_ZONES;
 
   const [name, setName] = useState(advertisement?.name ?? '');
   const [type, setType] = useState<AdType>(advertisement?.type ?? 'IMAGE');
@@ -184,7 +215,7 @@ export function AdvertisementForm({ advertisement }: Props) {
           <div className="field">
             <label htmlFor="zone">Placement Zone</label>
             <select id="zone" value={zone} onChange={(e) => setZone(e.target.value as AdZone)}>
-              {AD_ZONES.map((z) => (
+              {zoneOptions.map((z) => (
                 <option key={z} value={z}>
                   {AD_ZONE_LABELS[z]}
                 </option>
