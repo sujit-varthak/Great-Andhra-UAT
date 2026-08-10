@@ -334,6 +334,48 @@ export const AD_PAGE_LABELS: Record<AdPage, string> = {
   listpage: 'List Page',
 };
 
+// Which device(s) each zone renders on, for the Desktop/Mobile sub-tabs within a page tab.
+// 'desktop'/'mobile' = a dedicated zone for that device only (confirmed via the frontend's
+// CSS - e.g. sidebars are 'desktop' because mobile-responsive.css hides .local_great/
+// .source-image-left/.source-image-right with display:none, and *_MOBILE_BANNER zones are
+// 'mobile' because they're rendered inside the mobile-only nav/list markup). 'both' is the
+// fallback for zones with no dedicated device counterpart (in-content/inline placements
+// that render regardless of device and are just responsively resized) - it appears under
+// both sub-tabs rather than risk hiding a zone that hasn't been confirmed device-specific.
+export type AdDevice = 'desktop' | 'mobile' | 'both';
+
+export const AD_ZONE_DEVICE: Record<Exclude<AdZone, 'ROADBLOCK'>, AdDevice> = {
+  HOMEPAGE_SIDEBAR_LEFT: 'desktop',
+  HOMEPAGE_SIDEBAR_RIGHT: 'desktop',
+  HOMEPAGE_TOP_BANNER: 'desktop',
+  HOMEPAGE_SECTION_INLINE: 'both',
+  HOMEPAGE_MOBILE_BANNER: 'mobile',
+  HOMEPAGE_ABOVE_HEADER_BANNER: 'desktop',
+  HOMEPAGE_STRIP_BANNER_1: 'both',
+  HOMEPAGE_STRIP_BANNER_2: 'both',
+  HOMEPAGE_STRIP_BANNER_3: 'both',
+  HOMEPAGE_BIG_STORY_BANNER: 'both',
+  HOMEPAGE_LATEST_NEWS_INLINE_AD: 'mobile',
+  HOMEPAGE_OPINION_BANNER: 'both',
+  HOMEPAGE_ARTICLE_WIDGET_AD: 'both',
+  INNER_SIDEBAR_LEFT: 'desktop',
+  INNER_SIDEBAR_RIGHT: 'desktop',
+  INNER_TOP_BANNER: 'desktop',
+  INNER_MOBILE_BANNER: 'mobile',
+  INNER_ARTICLE_BANNER: 'both',
+  INNER_ARTICLE_MIDCONTENT_AD: 'both',
+  INNER_SIDEBAR_BOTTOM_AD: 'both',
+  BOXOFFICE_SIDEBAR_LEFT: 'desktop',
+  BOXOFFICE_SIDEBAR_RIGHT: 'desktop',
+  BOXOFFICE_TOP_BANNER: 'desktop',
+  BOXOFFICE_MOBILE_BANNER: 'mobile',
+  BOXOFFICE_STICKY_AD: 'both',
+  BOXOFFICE_REVIEW_AD: 'both',
+  LISTPAGE_CONTENT_AD: 'both',
+  LISTPAGE_TOP_BANNER: 'desktop',
+  LISTPAGE_MOBILE_BANNER: 'mobile',
+};
+
 export interface Advertisement {
   id: string;
   name: string;

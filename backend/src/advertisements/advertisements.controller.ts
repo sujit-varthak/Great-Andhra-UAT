@@ -27,7 +27,7 @@ export class AdvertisementsController {
   findAll(
     @Query('skip') skip: string = '0',
     @Query('take') take: string = '10',
-    @Query('zone') zone?: AdZone,
+    @Query('zone') zone?: string,
     @Query('isActive') isActive?: string,
     @Query('type') type?: string,
   ) {

@@ -36,12 +36,15 @@ export class AdvertisementsService {
   async findAll(
     skip: number = 0,
     take: number = 10,
-    zone?: AdZone,
+    zone?: string,
     isActive?: boolean,
     type?: string,
   ) {
     const where: any = {};
-    if (zone) where.zone = zone;
+    if (zone) {
+      const zones = zone.split(',').filter(Boolean) as AdZone[];
+      where.zone = zones.length > 1 ? { in: zones } : zones[0];
+    }
     if (isActive !== undefined) where.isActive = isActive;
     if (type) where.type = type;
 

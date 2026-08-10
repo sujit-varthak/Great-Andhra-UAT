@@ -7,9 +7,11 @@ import {
   AdvertisementListItem,
   AdZone,
   AdPage,
+  AdDevice,
   AD_ZONE_LABELS,
   AD_ZONE_PAGE,
   AD_PAGE_LABELS,
+  AD_ZONE_DEVICE,
 } from '@/lib/types';
 
 const AD_ZONES: AdZone[] = [
@@ -49,11 +51,18 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50];
 const DEFAULT_PAGE_SIZE = 25;
 
 const PAGE_TABS: AdPage[] = ['home', 'inner', 'boxoffice', 'listpage'];
+const DEVICE_TABS: AdDevice[] = ['desktop', 'mobile'];
+const DEVICE_LABELS: Record<AdDevice, string> = { desktop: 'Desktop', mobile: 'Mobile', both: 'Both' };
 
-function zonesForPage(page: AdPage): AdZone[] {
+function zonesForPage(page: AdPage): Array<Exclude<AdZone, 'ROADBLOCK'>> {
   return (Object.keys(AD_ZONE_PAGE) as Array<keyof typeof AD_ZONE_PAGE>).filter(
     (z) => AD_ZONE_PAGE[z] === page,
   );
+}
+
+// A zone tagged 'both' (no dedicated device counterpart) appears under either sub-tab.
+function zonesForPageAndDevice(page: AdPage, device: AdDevice): Array<Exclude<AdZone, 'ROADBLOCK'>> {
+  return zonesForPage(page).filter((z) => AD_ZONE_DEVICE[z] === device || AD_ZONE_DEVICE[z] === 'both');
 }
 
 function getPageNumbers(current: number, totalPages: number): (number | 'ellipsis')[] {
@@ -70,12 +79,17 @@ function getPageNumbers(current: number, totalPages: number): (number | 'ellipsi
   return result;
 }
 
-// One page's zone browser: pick a zone from a dropdown scoped to that page, see its current
-// ad(s) (a zone can still hold more than one - they rotate on the live site), edit/delete, or
-// jump to the create form with this zone pre-selected.
+const ALL_ZONES = 'all';
+type ZoneSelection = AdZone | typeof ALL_ZONES;
+
+// One page's zone browser: a Desktop/Mobile sub-tab scopes which zones are in play, then a
+// dropdown (defaulting to "All <Page> Ads") lets the user narrow to one specific zone. Shows
+// current ad(s) per zone (a zone can still hold more than one - they rotate on the live site),
+// edit/delete, or jump to the create form with a zone pre-selected.
 function PageZoneBrowser({ page }: { page: AdPage }) {
-  const zones = zonesForPage(page);
-  const [selectedZone, setSelectedZone] = useState<AdZone>(zones[0]);
+  const [device, setDevice] = useState<AdDevice>('desktop');
+  const zones = zonesForPageAndDevice(page, device);
+  const [selectedZone, setSelectedZone] = useState<ZoneSelection>(ALL_ZONES);
   const [ads, setAds] = useState<AdvertisementListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -83,15 +97,21 @@ function PageZoneBrowser({ page }: { page: AdPage }) {
   function load() {
     setLoading(true);
     setError('');
+    const zoneParam = selectedZone === ALL_ZONES ? zones.join(',') : selectedZone;
     apiFetch<{ items: AdvertisementListItem[]; total: number }>(
-      `/advertisements?zone=${selectedZone}&take=50`,
+      `/advertisements?zone=${zoneParam}&take=50`,
     )
       .then((res) => setAds(res.items))
       .catch((err) => setError(err instanceof ApiError ? err.message : 'Failed to load ads'))
       .finally(() => setLoading(false));
   }
 
-  useEffect(load, [selectedZone]);
+  useEffect(load, [selectedZone, device]);
+
+  function handleDeviceChange(next: AdDevice) {
+    setDevice(next);
+    setSelectedZone(ALL_ZONES);
+  }
 
   async function handleDelete(id: string) {
     if (!window.confirm('Delete this advertisement? This cannot be undone.')) return;
@@ -105,13 +125,27 @@ function PageZoneBrowser({ page }: { page: AdPage }) {
 
   return (
     <div>
+      <div className="toolbar">
+        {DEVICE_TABS.map((d) => (
+          <button
+            key={d}
+            type="button"
+            className={device === d ? 'btn btn-sm btn-primary' : 'btn btn-sm'}
+            onClick={() => handleDeviceChange(d)}
+          >
+            {DEVICE_LABELS[d]}
+          </button>
+        ))}
+      </div>
+
       <div className="field" style={{ maxWidth: '480px' }}>
         <label htmlFor={`zone-${page}`}>Ad Zone</label>
         <select
           id={`zone-${page}`}
           value={selectedZone}
-          onChange={(e) => setSelectedZone(e.target.value as AdZone)}
+          onChange={(e) => setSelectedZone(e.target.value as ZoneSelection)}
         >
+          <option value={ALL_ZONES}>All {AD_PAGE_LABELS[page]} Ads ({DEVICE_LABELS[device]})</option>
           {zones.map((z) => (
             <option key={z} value={z}>
               {AD_ZONE_LABELS[z]}
@@ -132,6 +166,7 @@ function PageZoneBrowser({ page }: { page: AdPage }) {
             <thead>
               <tr>
                 <th>Name</th>
+                {selectedZone === ALL_ZONES && <th>Zone</th>}
                 <th>Type</th>
                 <th>Status</th>
                 <th>Start Date</th>
@@ -145,6 +180,7 @@ function PageZoneBrowser({ page }: { page: AdPage }) {
                   <td>
                     <Link href={`/advertisements/${a.id}`}>{a.name}</Link>
                   </td>
+                  {selectedZone === ALL_ZONES && <td>{AD_ZONE_LABELS[a.zone]}</td>}
                   <td>
                     <span className="badge">{a.type}</span>
                   </td>
@@ -171,11 +207,13 @@ function PageZoneBrowser({ page }: { page: AdPage }) {
         )}
       </div>
 
-      <div className="toolbar">
-        <Link href={`/advertisements/new?zone=${selectedZone}`} className="btn btn-primary">
-          + Add New Ad for This Zone
-        </Link>
-      </div>
+      {selectedZone !== ALL_ZONES && (
+        <div className="toolbar">
+          <Link href={`/advertisements/new?zone=${selectedZone}`} className="btn btn-primary">
+            + Add New Ad for This Zone
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
