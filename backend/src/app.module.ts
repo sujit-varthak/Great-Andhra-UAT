@@ -22,6 +22,7 @@ import { MediaModule } from './media/media.module';
 import { SearchModule } from './search/search.module';
 import { HomepageModule } from './homepage/homepage.module';
 import { AdvertisementsModule } from './advertisements/advertisements.module';
+import { CacheModule } from './cache/cache.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { AdvertisementsModule } from './advertisements/advertisements.module';
     SearchModule,
     HomepageModule,
     AdvertisementsModule,
+    CacheModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
