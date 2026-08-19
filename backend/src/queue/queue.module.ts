@@ -10,6 +10,11 @@ export const SCHEDULED_PUBLISHING_QUEUE = 'scheduled-publishing';
         connection: {
           host: process.env.REDIS_HOST || 'localhost',
           port: process.env.REDIS_PORT ? Number(process.env.REDIS_PORT) : 6379,
+          username: process.env.REDIS_USERNAME || undefined,
+          password: process.env.REDIS_PASSWORD || undefined,
+          // Managed Redis/Valkey (e.g. DO's) requires TLS; local dev Redis doesn't
+          // speak TLS at all, so this is opt-in via REDIS_TLS rather than assumed.
+          tls: process.env.REDIS_TLS === 'true' ? {} : undefined,
         },
       }),
     }),
