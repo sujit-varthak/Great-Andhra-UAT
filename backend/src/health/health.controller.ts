@@ -23,20 +23,30 @@ export class HealthController {
     // round trip - proves Redis is reachable AND writable/readable with whatever
     // host/username/password/TLS config is actually configured, not just that a
     // plain socket opens (which a bare ping() wouldn't rule out auth/permission
-    // issues on either the SET or GET side).
+    // issues on either the SET or GET side). Bounded with a timeout because a
+    // misconfigured host/port/TLS/firewall typically hangs the TCP handshake
+    // rather than rejecting fast - an unbounded await here would hang the whole
+    // health check (and anything waiting on it) indefinitely.
     try {
-      const client = await this.publishQueue.client as unknown as {
-        set(key: string, value: string): Promise<string>;
-        get(key: string): Promise<string | null>;
-        del(key: string): Promise<number>;
-      };
-      const testKey = `health-check:${Date.now()}`;
-      await client.set(testKey, 'ok');
-      const value = await client.get(testKey);
-      await client.del(testKey);
-      if (value !== 'ok') {
-        throw new Error(`round-trip returned "${value}" instead of "ok"`);
-      }
+      await Promise.race([
+        (async () => {
+          const client = await this.publishQueue.client as unknown as {
+            set(key: string, value: string): Promise<string>;
+            get(key: string): Promise<string | null>;
+            del(key: string): Promise<number>;
+          };
+          const testKey = `health-check:${Date.now()}`;
+          await client.set(testKey, 'ok');
+          const value = await client.get(testKey);
+          await client.del(testKey);
+          if (value !== 'ok') {
+            throw new Error(`round-trip returned "${value}" instead of "ok"`);
+          }
+        })(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('timed out after 5s - check host/port/TLS/firewall')), 5000),
+        ),
+      ]);
     } catch (err) {
       throw new ServiceUnavailableException(`Redis unreachable: ${(err as Error).message}`);
     }
