@@ -37,24 +37,39 @@ const prisma = new PrismaClient();
 
 const VERCEL_BLOB_HOST_RE = /\.public\.blob\.vercel-storage\.com\//;
 
-type FieldRef = { model: 'article' | 'advertisement' | 'dontMiss' | 'epaperImage'; field: string };
+// `nullable` must match schema.prisma exactly for each field - Prisma's client
+// rejects a `{ not: null }` filter on a column typed as a required (non-optional)
+// String, since that filter only makes sense for a column that CAN be null.
+// EpaperImage.imageUrl is `String` (required, always populated); the other four
+// are all `String?`. Using `(prisma as any)` below bypasses the compile-time
+// check that would normally catch this mismatch, so getting this flag right is
+// what keeps the query valid at runtime instead of throwing
+// PrismaClientValidationError.
+type FieldRef = { model: 'article' | 'advertisement' | 'dontMiss' | 'epaperImage'; field: string; nullable: boolean };
 
 const TARGET_FIELDS: FieldRef[] = [
-  { model: 'article', field: 'featuredImageUrl' },
-  { model: 'advertisement', field: 'imageUrlDesktop' },
-  { model: 'advertisement', field: 'imageUrlMobile' },
-  { model: 'dontMiss', field: 'imageUrl' },
-  { model: 'epaperImage', field: 'imageUrl' },
+  { model: 'article', field: 'featuredImageUrl', nullable: true },
+  { model: 'advertisement', field: 'imageUrlDesktop', nullable: true },
+  { model: 'advertisement', field: 'imageUrlMobile', nullable: true },
+  { model: 'dontMiss', field: 'imageUrl', nullable: true },
+  { model: 'epaperImage', field: 'imageUrl', nullable: false },
 ];
+
+// A required field is populated on every row by definition, so "match the rows
+// that have a value" is just "match every row" - passing `{}` instead of
+// `{ not: null }` is what avoids the invalid-filter error for those fields.
+function populatedWhere(field: string, nullable: boolean): Record<string, unknown> {
+  return nullable ? { [field]: { not: null } } : {};
+}
 
 async function countsByField() {
   const rows: { model: string; field: string; total: number; nonNull: number; vercelBlob: number }[] = [];
-  for (const { model, field } of TARGET_FIELDS) {
+  for (const { model, field, nullable } of TARGET_FIELDS) {
     const delegate = (prisma as any)[model];
     const total = await delegate.count();
-    const nonNull = await delegate.count({ where: { [field]: { not: null } } });
+    const nonNull = await delegate.count({ where: populatedWhere(field, nullable) });
     const all: Array<Record<string, string | null>> = await delegate.findMany({
-      where: { [field]: { not: null } },
+      where: populatedWhere(field, nullable),
       select: { [field]: true },
     });
     const vercelBlob = all.filter((r) => {
@@ -71,7 +86,7 @@ async function distinctVercelUrls(): Promise<Map<string, FieldRef[]>> {
   for (const ref of TARGET_FIELDS) {
     const delegate = (prisma as any)[ref.model];
     const rows: Array<Record<string, string | null>> = await delegate.findMany({
-      where: { [ref.field]: { not: null } },
+      where: populatedWhere(ref.field, ref.nullable),
       select: { [ref.field]: true },
     });
     for (const row of rows) {
