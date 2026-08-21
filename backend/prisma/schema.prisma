@@ -171,6 +171,18 @@ model Article {
   @@index([status])
   @@index([categoryId])
   @@index([createdAt])
+  // Every homepage flag feed (findBigStoryFeed/findTrendingFeed/findTalkOfTheTownFeed/
+  // findFeaturedFeed in articles.service.ts) filters on exactly {status, <flag>} and orders
+  // by updatedAt desc — these mirror that shape instead of relying on the bare [status]
+  // index above plus a full scan of the (mostly-false) flag column.
+  @@index([status, isBigStory, updatedAt])
+  @@index([status, isTrending, updatedAt])
+  @@index([status, isTalkOfTheTown, updatedAt])
+  @@index([status, isFeatured, updatedAt])
+  // listPublished()/findByCategoryPath() filter on {status, categoryId?} and order by
+  // publishedAt desc; categoryId is optional there (site-wide public listing has none).
+  @@index([status, publishedAt])
+  @@index([status, categoryId, publishedAt])
   @@map("articles")
 }
 
