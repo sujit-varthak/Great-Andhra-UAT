@@ -21,11 +21,7 @@ export class RedisCacheService implements OnModuleDestroy {
       // response instead.
       connectTimeout: 3000,
       maxRetriesPerRequest: 1,
-      // Bounded backoff, capped at 3s between attempts - never gives up
-      // permanently. `retryStrategy: () => null` previously meant a single
-      // Valkey blip or restart would silently and permanently disable caching
-      // for that instance's remaining lifetime.
-      retryStrategy: (times) => Math.min(times * 200, 3000),
+      retryStrategy: () => null,
     });
 
     this.client.on('error', (err) => {

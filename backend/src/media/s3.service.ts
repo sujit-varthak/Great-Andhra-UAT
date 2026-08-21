@@ -9,13 +9,12 @@ export class S3Service {
   constructor() {
     this.bucket = process.env.S3_BUCKET || 'greatandhra-media';
     this.client = new S3Client({
-      // R2 doesn't use AWS regions - 'auto' is Cloudflare's documented value.
-      region: process.env.S3_REGION || 'auto',
-      endpoint: process.env.S3_ENDPOINT,
+      region: process.env.S3_REGION || 'us-east-1',
+      endpoint: process.env.S3_ENDPOINT || 'http://localhost:9000',
       forcePathStyle: true,
       credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY || '',
-        secretAccessKey: process.env.S3_SECRET_KEY || '',
+        accessKeyId: process.env.S3_ACCESS_KEY || 'greatandhra',
+        secretAccessKey: process.env.S3_SECRET_KEY || 'greatandhra_dev_password',
       },
     });
   }

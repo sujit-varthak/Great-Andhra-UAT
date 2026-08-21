@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, Logger, ServiceUnavailableException } 
 import { fromBuffer as fileTypeFromBuffer } from 'file-type';
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
-import { S3Service } from './s3.service';
+import { VercelBlobService } from './vercel-blob.service';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -16,7 +16,7 @@ export class MediaService {
   private readonly logger = new Logger(MediaService.name);
 
   constructor(
-    private readonly storageService: S3Service,
+    private readonly storageService: VercelBlobService,
     private readonly auditService: AuditService,
     private readonly prisma: PrismaService,
   ) {}
