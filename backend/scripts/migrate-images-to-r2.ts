@@ -131,6 +131,55 @@ async function verify() {
   console.log('No network requests made, no writes made. Re-run with --apply once these numbers look right.');
 }
 
+// How many images to download+upload+write concurrently. Sequential (1 at a
+// time) was the original bottleneck - 2000+ images at even a modest ~2-5s
+// each in series is 1-3 hours, and a single slow/unresponsive Vercel Blob URL
+// (no timeout) could stall everything behind it indefinitely. Kept modest
+// rather than maximized - this is also hitting Vercel Blob's and R2's rate
+// limits, not just our own network.
+const CONCURRENCY = 8;
+// A single fetch() had no timeout at all - one unresponsive URL could hang
+// the entire remaining migration forever, which is what happened in practice.
+const FETCH_TIMEOUT_MS = 15_000;
+
+async function migrateOne(
+  oldUrl: string,
+  refs: FieldRef[],
+  client: S3Client,
+  bucket: string,
+  publicBase: string,
+): Promise<{ ok: true; rowsUpdated: number } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(oldUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+    if (!res.ok) throw new Error(`download failed: HTTP ${res.status}`);
+    const contentType = res.headers.get('content-type') || 'application/octet-stream';
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const ext = extFromUrlOrContentType(oldUrl, contentType);
+    const key = `migrated/${randomUUID()}.${ext}`;
+
+    await client.send(
+      new PutObjectCommand({ Bucket: bucket, Key: key, Body: buffer, ContentType: contentType }),
+    );
+    const newUrl = `${publicBase}/${key}`;
+
+    let rowsUpdated = 0;
+    for (const ref of refs) {
+      const delegate = (prisma as any)[ref.model];
+      const result = await delegate.updateMany({
+        where: { [ref.field]: oldUrl },
+        data: { [ref.field]: newUrl },
+      });
+      rowsUpdated += result.count;
+    }
+    return { ok: true, rowsUpdated };
+  } catch (err) {
+    const message = err instanceof Error && err.name === 'TimeoutError'
+      ? `timed out after ${FETCH_TIMEOUT_MS}ms`
+      : (err as Error).message;
+    return { ok: false, error: message };
+  }
+}
+
 async function apply() {
   const bucket = requireEnv('S3_BUCKET');
   const publicBase = requireEnv('S3_PUBLIC_URL_BASE');
@@ -146,40 +195,29 @@ async function apply() {
 
   const before = await countsByField();
   const urls = await distinctVercelUrls();
-  console.log(`Migrating ${urls.size} distinct Vercel Blob URL(s) to R2 bucket "${bucket}"...`);
+  console.log(`Migrating ${urls.size} distinct Vercel Blob URL(s) to R2 bucket "${bucket}" (concurrency ${CONCURRENCY})...`);
 
   let migrated = 0;
   let rowsUpdated = 0;
   const failures: { url: string; error: string }[] = [];
+  const entries = Array.from(urls.entries());
 
-  for (const [oldUrl, refs] of urls) {
-    try {
-      const res = await fetch(oldUrl);
-      if (!res.ok) throw new Error(`download failed: HTTP ${res.status}`);
-      const contentType = res.headers.get('content-type') || 'application/octet-stream';
-      const buffer = Buffer.from(await res.arrayBuffer());
-      const ext = extFromUrlOrContentType(oldUrl, contentType);
-      const key = `migrated/${randomUUID()}.${ext}`;
-
-      await client.send(
-        new PutObjectCommand({ Bucket: bucket, Key: key, Body: buffer, ContentType: contentType }),
-      );
-      const newUrl = `${publicBase}/${key}`;
-
-      for (const ref of refs) {
-        const delegate = (prisma as any)[ref.model];
-        const result = await delegate.updateMany({
-          where: { [ref.field]: oldUrl },
-          data: { [ref.field]: newUrl },
-        });
-        rowsUpdated += result.count;
+  for (let i = 0; i < entries.length; i += CONCURRENCY) {
+    const batch = entries.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(([oldUrl, refs]) => migrateOne(oldUrl, refs, client, bucket, publicBase)),
+    );
+    for (let j = 0; j < results.length; j++) {
+      const [oldUrl] = batch[j];
+      const result = results[j];
+      if (result.ok) {
+        migrated += 1;
+        rowsUpdated += result.rowsUpdated;
+      } else {
+        failures.push({ url: oldUrl, error: result.error });
       }
-
-      migrated += 1;
-      if (migrated % 25 === 0) console.log(`  ${migrated}/${urls.size} images migrated...`);
-    } catch (err) {
-      failures.push({ url: oldUrl, error: (err as Error).message });
     }
+    console.log(`  ${Math.min(i + CONCURRENCY, entries.length)}/${entries.length} processed (${migrated} succeeded so far)...`);
   }
 
   console.log(`\nDone: ${migrated}/${urls.size} images migrated, ${rowsUpdated} DB row(s) updated.`);

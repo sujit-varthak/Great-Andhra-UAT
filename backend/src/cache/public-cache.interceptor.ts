@@ -3,7 +3,7 @@ import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { RedisCacheService } from './redis-cache.service';
 
-const CACHE_TTL_SECONDS = 45;
+const CACHE_TTL_SECONDS = 10 * 60;
 const CACHE_KEY_PREFIX = 'cache:public:';
 
 // Applied globally (see cache.module.ts). Caches every GET under /api/public/*
