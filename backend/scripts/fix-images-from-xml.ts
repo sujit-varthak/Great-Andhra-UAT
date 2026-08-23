@@ -43,8 +43,17 @@ const CONCURRENCY = 8;
 const FETCH_TIMEOUT_MS = 15_000;
 
 interface XmlImageRef {
-  legacyPostId: number;
+  legacyPostId: number | null;
+  title: string | null;
   originalImageUrl: string;
+}
+
+// Titles are matched after light normalization (trim + collapse internal
+// whitespace + lowercase) rather than byte-for-byte, since minor formatting
+// drift between the original XML and however it ended up in the database is
+// common and shouldn't cause an otherwise-exact title to miss.
+function normalizeTitle(title: string): string {
+  return title.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
 // This has to run reliably on a small (512MB RAM) droplet no matter how
@@ -118,10 +127,16 @@ function collectAttachmentUrls(xmlPath: string): Promise<Map<number, string>> {
 }
 
 interface PostThumbRef {
-  legacyPostId: number;
+  legacyPostId: number | null;
+  title: string | null;
   thumbnailId: number;
 }
 
+// Captures <title> alongside legacyPostId/thumbnailId - the original import
+// of this data matched articles to images by TITLE, not by WordPress post
+// ID (confirmed: the already-imported articles have legacyPostId: null), so
+// title is the primary matching key downstream even though legacyPostId is
+// still captured and tried first wherever it IS populated.
 function collectPostThumbnailRefs(xmlPath: string): Promise<PostThumbRef[]> {
   return new Promise((resolve, reject) => {
     const refs: PostThumbRef[] = [];
@@ -133,6 +148,7 @@ function collectPostThumbnailRefs(xmlPath: string): Promise<PostThumbRef[]> {
     let textBuffer = '';
     let postType = '';
     let postId: number | null = null;
+    let title: string | null = null;
     let metaKey = '';
     let metaValue = '';
     let thumbnailId: number | null = null;
@@ -144,6 +160,7 @@ function collectPostThumbnailRefs(xmlPath: string): Promise<PostThumbRef[]> {
         inItem = true;
         postType = '';
         postId = null;
+        title = null;
         thumbnailId = null;
       } else if (node.name === 'wp:postmeta') {
         inPostmeta = true;
@@ -162,6 +179,7 @@ function collectPostThumbnailRefs(xmlPath: string): Promise<PostThumbRef[]> {
         const value = textBuffer.trim();
         if (name === 'wp:post_type') postType = value;
         else if (name === 'wp:post_id') postId = Number(value);
+        else if (name === 'title') title = value;
         else if (inPostmeta && name === 'wp:meta_key') metaKey = value;
         else if (inPostmeta && name === 'wp:meta_value') metaValue = value;
       }
@@ -169,8 +187,8 @@ function collectPostThumbnailRefs(xmlPath: string): Promise<PostThumbRef[]> {
         if (metaKey === '_thumbnail_id' && metaValue) thumbnailId = Number(metaValue);
         inPostmeta = false;
       } else if (name === 'item') {
-        if (postType === 'post' && postId && thumbnailId) {
-          refs.push({ legacyPostId: postId, thumbnailId });
+        if (postType === 'post' && thumbnailId) {
+          refs.push({ legacyPostId: postId, title, thumbnailId });
         }
         inItem = false;
       }
@@ -187,9 +205,9 @@ async function parseImageRefs(xmlPath: string): Promise<XmlImageRef[]> {
   const postRefs = await collectPostThumbnailRefs(xmlPath);
 
   const refs: XmlImageRef[] = [];
-  for (const { legacyPostId, thumbnailId } of postRefs) {
+  for (const { legacyPostId, title, thumbnailId } of postRefs) {
     const originalImageUrl = attachmentUrlByPostId.get(thumbnailId);
-    if (originalImageUrl) refs.push({ legacyPostId, originalImageUrl });
+    if (originalImageUrl) refs.push({ legacyPostId, title, originalImageUrl });
   }
   return refs;
 }
@@ -214,36 +232,103 @@ function extFromUrlOrContentType(url: string, contentType: string): string {
 
 interface BrokenArticle {
   articleId: string;
-  legacyPostId: number;
+  matchedBy: 'legacyPostId' | 'title';
+  key: string;
   originalImageUrl: string;
 }
 
-async function findBrokenArticles(refs: XmlImageRef[]): Promise<BrokenArticle[]> {
-  const legacyIds = refs.map((r) => r.legacyPostId);
+interface MatchResult {
+  broken: BrokenArticle[];
+  // Title matched, but more than one XML post shares that exact normalized
+  // title with DIFFERENT images - can't safely guess which one is right, so
+  // these are deliberately left unfixed rather than risk assigning the wrong
+  // image to an article.
+  ambiguousTitles: string[];
+  // Broken article whose title (or legacyPostId) doesn't appear in this XML
+  // at all - expected if this export doesn't cover every article, not
+  // necessarily an error.
+  unmatchedCount: number;
+}
+
+async function findBrokenArticles(refs: XmlImageRef[]): Promise<MatchResult> {
+  const byLegacyId = new Map<number, XmlImageRef>();
+  const byTitle = new Map<string, XmlImageRef[]>();
+  for (const ref of refs) {
+    if (ref.legacyPostId) byLegacyId.set(ref.legacyPostId, ref);
+    if (ref.title) {
+      const key = normalizeTitle(ref.title);
+      const arr = byTitle.get(key) ?? [];
+      arr.push(ref);
+      byTitle.set(key, arr);
+    }
+  }
+
   const articles = await prisma.article.findMany({
-    where: { legacyPostId: { in: legacyIds } },
-    select: { id: true, legacyPostId: true, featuredImageUrl: true },
+    where: { featuredImageUrl: { contains: 'vercel-storage.com' } },
+    select: { id: true, legacyPostId: true, title: true, featuredImageUrl: true },
   });
-  const refByLegacyId = new Map(refs.map((r) => [r.legacyPostId, r]));
 
   const broken: BrokenArticle[] = [];
+  const ambiguousTitles: string[] = [];
+  let unmatchedCount = 0;
+
   for (const a of articles) {
     if (!a.featuredImageUrl || !VERCEL_BLOB_HOST_RE.test(a.featuredImageUrl)) continue;
-    if (a.legacyPostId === null) continue;
-    const ref = refByLegacyId.get(a.legacyPostId);
-    if (!ref) continue;
-    broken.push({ articleId: a.id, legacyPostId: a.legacyPostId, originalImageUrl: ref.originalImageUrl });
+
+    if (a.legacyPostId && byLegacyId.has(a.legacyPostId)) {
+      const ref = byLegacyId.get(a.legacyPostId)!;
+      broken.push({
+        articleId: a.id,
+        matchedBy: 'legacyPostId',
+        key: String(a.legacyPostId),
+        originalImageUrl: ref.originalImageUrl,
+      });
+      continue;
+    }
+
+    const titleKey = normalizeTitle(a.title);
+    const candidates = byTitle.get(titleKey);
+    if (!candidates || candidates.length === 0) {
+      unmatchedCount += 1;
+      continue;
+    }
+
+    const distinctUrls = new Set(candidates.map((c) => c.originalImageUrl));
+    if (distinctUrls.size > 1) {
+      // Same title, but the XML itself has multiple different images under
+      // it - genuinely ambiguous, not something normalization can resolve.
+      ambiguousTitles.push(a.title);
+      continue;
+    }
+
+    broken.push({
+      articleId: a.id,
+      matchedBy: 'title',
+      key: a.title,
+      originalImageUrl: candidates[0].originalImageUrl,
+    });
   }
-  return broken;
+
+  return { broken, ambiguousTitles, unmatchedCount };
 }
 
 async function verify(xmlPath: string) {
   const refs = await parseImageRefs(xmlPath);
   console.log(`${refs.length} post(s) in the XML have a resolvable featured image.`);
-  const broken = await findBrokenArticles(refs);
+  const { broken, ambiguousTitles, unmatchedCount } = await findBrokenArticles(refs);
+  const byLegacyId = broken.filter((b) => b.matchedBy === 'legacyPostId').length;
+  const byTitle = broken.filter((b) => b.matchedBy === 'title').length;
   console.log(
-    `${broken.length} already-existing article(s) currently have a dead Vercel Blob image AND a matching entry in this XML - these are what --apply would fix.`,
+    `${broken.length} already-broken article(s) matched to an image in this XML (${byLegacyId} by legacyPostId, ${byTitle} by title) - these are what --apply would fix.`,
   );
+  if (ambiguousTitles.length > 0) {
+    console.log(
+      `${ambiguousTitles.length} article(s) skipped - their title matches more than one XML post with DIFFERENT images, too ambiguous to guess:`,
+    );
+    for (const t of ambiguousTitles.slice(0, 20)) console.log(`  "${t}"`);
+    if (ambiguousTitles.length > 20) console.log(`  ...and ${ambiguousTitles.length - 20} more`);
+  }
+  console.log(`${unmatchedCount} broken article(s) have no matching post in this XML at all.`);
   console.log('No network requests made, no writes made. Re-run with --apply once this number looks right.');
 }
 
@@ -291,20 +376,26 @@ async function apply(xmlPath: string) {
   });
 
   const refs = await parseImageRefs(xmlPath);
-  const broken = await findBrokenArticles(refs);
+  const { broken, ambiguousTitles, unmatchedCount } = await findBrokenArticles(refs);
   console.log(
     `Fixing ${broken.length} article image(s) from the original WordPress URLs in the XML (concurrency ${CONCURRENCY})...`,
   );
+  if (ambiguousTitles.length > 0) {
+    console.log(`(${ambiguousTitles.length} article(s) skipped - ambiguous title match, left untouched)`);
+  }
+  if (unmatchedCount > 0) {
+    console.log(`(${unmatchedCount} broken article(s) have no match in this XML at all, left untouched)`);
+  }
 
   let fixed = 0;
-  const failures: { legacyPostId: number; error: string }[] = [];
+  const failures: { matchedBy: string; key: string; error: string }[] = [];
 
   for (let i = 0; i < broken.length; i += CONCURRENCY) {
     const batch = broken.slice(i, i + CONCURRENCY);
     const results = await Promise.all(batch.map((item) => fixOne(item, client, bucket, publicBase)));
     results.forEach((result, j) => {
       if (result.ok) fixed += 1;
-      else failures.push({ legacyPostId: batch[j].legacyPostId, error: result.error });
+      else failures.push({ matchedBy: batch[j].matchedBy, key: batch[j].key, error: result.error });
     });
     console.log(`  ${Math.min(i + CONCURRENCY, broken.length)}/${broken.length} processed (${fixed} fixed so far)...`);
   }
@@ -312,7 +403,7 @@ async function apply(xmlPath: string) {
   console.log(`\nDone: ${fixed}/${broken.length} article image(s) fixed.`);
   if (failures.length > 0) {
     console.log(`\n${failures.length} failure(s) - these articles still point at the dead Vercel Blob URL:`);
-    for (const f of failures) console.log(`  legacyPostId ${f.legacyPostId}: ${f.error}`);
+    for (const f of failures) console.log(`  [${f.matchedBy}] ${f.key}: ${f.error}`);
   }
 }
 
