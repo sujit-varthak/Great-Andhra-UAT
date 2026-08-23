@@ -69,61 +69,21 @@ function normalizeTitle(title: string): string {
 // postmeta key/value) ever get held in memory, as small string values, not
 // the surrounding multi-KB/MB text nodes.
 //
-// Two passes are used rather than one because a post's <item> and the
-// attachment <item> its _thumbnail_id points at can appear in either order
-// in the file - a single pass can't guarantee every thumbnail is resolvable
-// yet when it's encountered. Each pass is still constant-memory: pass 1
-// holds only attachment id->url pairs, pass 2 holds only post id+thumbnailId
-// pairs - both small relative to file size regardless of how large the
-// export is.
-
-function collectAttachmentUrls(xmlPath: string): Promise<Map<number, string>> {
-  return new Promise((resolve, reject) => {
-    const attachmentUrlByPostId = new Map<number, string>();
-    const parser = sax.createStream(true, { trim: true });
-
-    let inItem = false;
-    let leafTag = '';
-    let textBuffer = '';
-    let postType = '';
-    let postId: number | null = null;
-    let attachmentUrl: string | null = null;
-
-    parser.on('opentag', (node: sax.Tag) => {
-      leafTag = node.name;
-      textBuffer = '';
-      if (node.name === 'item') {
-        inItem = true;
-        postType = '';
-        postId = null;
-        attachmentUrl = null;
-      }
-    });
-    parser.on('text', (text: string) => {
-      if (inItem) textBuffer += text;
-    });
-    parser.on('cdata', (text: string) => {
-      if (inItem) textBuffer += text;
-    });
-    parser.on('closetag', (name: string) => {
-      if (inItem && name === leafTag) {
-        const value = textBuffer.trim();
-        if (name === 'wp:post_type') postType = value;
-        else if (name === 'wp:post_id') postId = Number(value);
-        else if (name === 'wp:attachment_url') attachmentUrl = value;
-      }
-      if (name === 'item') {
-        if (postType === 'attachment' && postId && attachmentUrl) {
-          attachmentUrlByPostId.set(postId, attachmentUrl);
-        }
-        inItem = false;
-      }
-    });
-    parser.on('error', reject);
-    parser.on('end', () => resolve(attachmentUrlByPostId));
-
-    createReadStream(xmlPath).pipe(parser as unknown as NodeJS.WritableStream);
-  });
+// A single pass, not two - collects attachment id->url pairs AND
+// post id/title/thumbnailId refs in the same walk over the file. An earlier
+// version used two separate passes (justified at the time by attachment and
+// post <item>s being able to appear in either order), but that meant two
+// full-file read streams and two live sax parser instances across the run.
+// On the 512MB droplet this script has to run on, that was still enough to
+// get OOM-killed. One pass halves file I/O and guarantees only one parser
+// instance is ever alive, while still resolving the ordering problem the
+// same way as before: both raw ref lists are collected first, then joined
+// in memory afterward (small - only id/title/thumbnailId strings, never
+// article body text).
+function logMemory(label: string) {
+  const mb = (n: number) => Math.round(n / 1024 / 1024);
+  const m = process.memoryUsage();
+  console.log(`  [memory@${label}] rss=${mb(m.rss)}MB heapUsed=${mb(m.heapUsed)}MB external=${mb(m.external)}MB`);
 }
 
 interface PostThumbRef {
@@ -132,14 +92,10 @@ interface PostThumbRef {
   thumbnailId: number;
 }
 
-// Captures <title> alongside legacyPostId/thumbnailId - the original import
-// of this data matched articles to images by TITLE, not by WordPress post
-// ID (confirmed: the already-imported articles have legacyPostId: null), so
-// title is the primary matching key downstream even though legacyPostId is
-// still captured and tried first wherever it IS populated.
-function collectPostThumbnailRefs(xmlPath: string): Promise<PostThumbRef[]> {
+function parseXml(xmlPath: string): Promise<{ attachmentUrlByPostId: Map<number, string>; postRefs: PostThumbRef[] }> {
   return new Promise((resolve, reject) => {
-    const refs: PostThumbRef[] = [];
+    const attachmentUrlByPostId = new Map<number, string>();
+    const postRefs: PostThumbRef[] = [];
     const parser = sax.createStream(true, { trim: true });
 
     let inItem = false;
@@ -149,9 +105,11 @@ function collectPostThumbnailRefs(xmlPath: string): Promise<PostThumbRef[]> {
     let postType = '';
     let postId: number | null = null;
     let title: string | null = null;
+    let attachmentUrl: string | null = null;
     let metaKey = '';
     let metaValue = '';
     let thumbnailId: number | null = null;
+    let itemCount = 0;
 
     parser.on('opentag', (node: sax.Tag) => {
       leafTag = node.name;
@@ -161,6 +119,7 @@ function collectPostThumbnailRefs(xmlPath: string): Promise<PostThumbRef[]> {
         postType = '';
         postId = null;
         title = null;
+        attachmentUrl = null;
         thumbnailId = null;
       } else if (node.name === 'wp:postmeta') {
         inPostmeta = true;
@@ -180,35 +139,46 @@ function collectPostThumbnailRefs(xmlPath: string): Promise<PostThumbRef[]> {
         if (name === 'wp:post_type') postType = value;
         else if (name === 'wp:post_id') postId = Number(value);
         else if (name === 'title') title = value;
+        else if (name === 'wp:attachment_url') attachmentUrl = value;
         else if (inPostmeta && name === 'wp:meta_key') metaKey = value;
         else if (inPostmeta && name === 'wp:meta_value') metaValue = value;
       }
+      // Freeing this reference as soon as the item closes (rather than only
+      // when the next item overwrites it) gives V8 the earliest possible
+      // chance to reclaim it - relevant on a 512MB box where every bit of
+      // headroom matters.
       if (name === 'wp:postmeta') {
         if (metaKey === '_thumbnail_id' && metaValue) thumbnailId = Number(metaValue);
         inPostmeta = false;
       } else if (name === 'item') {
-        if (postType === 'post' && thumbnailId) {
-          refs.push({ legacyPostId: postId, title, thumbnailId });
+        if (postType === 'attachment' && postId && attachmentUrl) {
+          attachmentUrlByPostId.set(postId, attachmentUrl);
+        } else if (postType === 'post' && thumbnailId) {
+          postRefs.push({ legacyPostId: postId, title, thumbnailId });
         }
         inItem = false;
+        itemCount += 1;
+        if (itemCount % 5000 === 0) logMemory(`parsing item ${itemCount}`);
       }
     });
     parser.on('error', reject);
-    parser.on('end', () => resolve(refs));
+    parser.on('end', () => resolve({ attachmentUrlByPostId, postRefs }));
 
     createReadStream(xmlPath).pipe(parser as unknown as NodeJS.WritableStream);
   });
 }
 
 async function parseImageRefs(xmlPath: string): Promise<XmlImageRef[]> {
-  const attachmentUrlByPostId = await collectAttachmentUrls(xmlPath);
-  const postRefs = await collectPostThumbnailRefs(xmlPath);
+  logMemory('before parse');
+  const { attachmentUrlByPostId, postRefs } = await parseXml(xmlPath);
+  logMemory('after parse');
 
   const refs: XmlImageRef[] = [];
   for (const { legacyPostId, title, thumbnailId } of postRefs) {
     const originalImageUrl = attachmentUrlByPostId.get(thumbnailId);
     if (originalImageUrl) refs.push({ legacyPostId, title, originalImageUrl });
   }
+  logMemory('after resolving refs');
   return refs;
 }
 
@@ -267,6 +237,7 @@ async function findBrokenArticles(refs: XmlImageRef[]): Promise<MatchResult> {
     where: { featuredImageUrl: { contains: 'vercel-storage.com' } },
     select: { id: true, legacyPostId: true, title: true, featuredImageUrl: true },
   });
+  logMemory('after DB query');
 
   const broken: BrokenArticle[] = [];
   const ambiguousTitles: string[] = [];
