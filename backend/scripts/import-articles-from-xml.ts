@@ -116,10 +116,21 @@ function isLatestNews(categories: ParsedCategory[]): boolean {
   return categories.some((c) => LATEST_NEWS_SLUGS.has(c.slug));
 }
 
+// Some categories only exist in the WordPress export as a near-duplicate of
+// a real, already-curated category (different slug, same topic) - confirmed
+// by hand after reviewing what showed up outside the curated set. Not a
+// generic heuristic - each entry here was a specific reviewed decision.
+const CATEGORY_SLUG_ALIASES: Record<string, string> = {
+  'movies-gossip': 'movie-gossip',
+};
+
 function pickPrimaryCategory(categories: ParsedCategory[]): ParsedCategory | undefined {
   const candidates = categories.filter((c) => !LATEST_NEWS_SLUGS.has(c.slug));
   if (candidates.length === 0) return undefined;
-  return candidates.find((c) => !GENERIC_CATEGORY_SLUGS.has(c.slug)) ?? candidates[0];
+  const picked = candidates.find((c) => !GENERIC_CATEGORY_SLUGS.has(c.slug)) ?? candidates[0];
+  const aliasedSlug = CATEGORY_SLUG_ALIASES[picked.slug];
+  if (!aliasedSlug) return picked;
+  return { name: KNOWN_CATEGORIES[aliasedSlug]?.name ?? aliasedSlug, slug: aliasedSlug };
 }
 
 // None of the 10 WordPress export files carry any <wp:category> hierarchy
