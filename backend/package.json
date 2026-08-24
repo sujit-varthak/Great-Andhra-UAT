@@ -15,7 +15,8 @@
     "migrate:legacy": "ts-node scripts/migrate-legacy-mysql.ts",
     "migrate:images-to-r2": "ts-node scripts/migrate-images-to-r2.ts",
     "fix-images-from-xml": "ts-node scripts/fix-images-from-xml.ts",
-    "clear-articles": "ts-node scripts/clear-articles.ts"
+    "clear-articles": "ts-node scripts/clear-articles.ts",
+    "import-articles-from-xml": "ts-node scripts/import-articles-from-xml.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.658.1",
