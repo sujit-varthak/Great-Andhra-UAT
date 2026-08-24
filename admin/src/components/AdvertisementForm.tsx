@@ -186,7 +186,15 @@ export function AdvertisementForm({ advertisement }: Props) {
       } else {
         await apiFetch('/advertisements', { method: 'POST', body: payload });
       }
-      router.push('/advertisements');
+      // Returns to whichever page/device tab this ad was created or edited from (carried in
+      // the URL by the list page's links) instead of always resetting to the Home/Desktop
+      // defaults - see AdvertisementsListPage's tab/device <-> URL sync.
+      const returnTab = searchParams.get('tab');
+      const returnDevice = searchParams.get('device');
+      const returnUrl = returnTab
+        ? `/advertisements?tab=${returnTab}${returnTab !== 'all' && returnDevice ? `&device=${returnDevice}` : ''}`
+        : '/advertisements';
+      router.push(returnUrl);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save advertisement');
     } finally {

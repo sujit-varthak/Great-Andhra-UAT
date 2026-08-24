@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch, ApiError } from '@/lib/api';
 import {
   AdvertisementListItem,
@@ -87,8 +88,15 @@ type ZoneSelection = AdZone | typeof ALL_ZONES;
 // dropdown (defaulting to "All <Page> Ads") lets the user narrow to one specific zone. Shows
 // current ad(s) per zone (a zone can still hold more than one - they rotate on the live site),
 // edit/delete, or jump to the create form with a zone pre-selected.
-function PageZoneBrowser({ page }: { page: AdPage }) {
-  const [device, setDevice] = useState<AdDevice>('desktop');
+function PageZoneBrowser({
+  page,
+  device,
+  onDeviceChange,
+}: {
+  page: AdPage;
+  device: AdDevice;
+  onDeviceChange: (device: AdDevice) => void;
+}) {
   const zones = zonesForPageAndDevice(page, device);
   const [selectedZone, setSelectedZone] = useState<ZoneSelection>(ALL_ZONES);
   const [ads, setAds] = useState<AdvertisementListItem[]>([]);
@@ -110,7 +118,7 @@ function PageZoneBrowser({ page }: { page: AdPage }) {
   useEffect(load, [selectedZone, device]);
 
   function handleDeviceChange(next: AdDevice) {
-    setDevice(next);
+    onDeviceChange(next);
     setSelectedZone(ALL_ZONES);
   }
 
@@ -179,7 +187,7 @@ function PageZoneBrowser({ page }: { page: AdPage }) {
               {ads.map((a) => (
                 <tr key={a.id}>
                   <td>
-                    <Link href={`/advertisements/${a.id}`}>{a.name}</Link>
+                    <Link href={`/advertisements/${a.id}?tab=${page}&device=${device}`}>{a.name}</Link>
                   </td>
                   {selectedZone === ALL_ZONES && <td>{AD_ZONE_LABELS[a.zone]}</td>}
                   <td>
@@ -210,7 +218,10 @@ function PageZoneBrowser({ page }: { page: AdPage }) {
 
       {selectedZone !== ALL_ZONES && (
         <div className="toolbar">
-          <Link href={`/advertisements/new?zone=${selectedZone}`} className="btn btn-primary">
+          <Link
+            href={`/advertisements/new?zone=${selectedZone}&tab=${page}&device=${device}`}
+            className="btn btn-primary"
+          >
             + Add New Ad for This Zone
           </Link>
         </div>
@@ -219,8 +230,44 @@ function PageZoneBrowser({ page }: { page: AdPage }) {
   );
 }
 
-export default function AdvertisementsListPage() {
-  const [activeTab, setActiveTab] = useState<AdPage | 'all'>('home');
+function isAdPage(value: string | null): value is AdPage {
+  return PAGE_TABS.includes(value as AdPage);
+}
+
+function isAdDevice(value: string | null): value is AdDevice {
+  return DEVICE_TABS.includes(value as AdDevice);
+}
+
+function AdvertisementsListPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const tabParam = searchParams.get('tab');
+  const deviceParam = searchParams.get('device');
+
+  // Which page/device tab you're on lives in the URL, not just component state - so
+  // creating or editing an ad from e.g. List Page + Mobile and saving returns you to that
+  // exact tab instead of resetting to the Home/Desktop defaults on remount.
+  const [activeTab, setActiveTabState] = useState<AdPage | 'all'>(
+    tabParam === 'all' || isAdPage(tabParam) ? tabParam : 'home',
+  );
+  const [device, setDeviceState] = useState<AdDevice>(isAdDevice(deviceParam) ? deviceParam : 'desktop');
+
+  function updateUrl(nextTab: AdPage | 'all', nextDevice: AdDevice) {
+    const qs = new URLSearchParams({ tab: nextTab });
+    if (nextTab !== 'all') qs.set('device', nextDevice);
+    router.replace(`/advertisements?${qs.toString()}`, { scroll: false });
+  }
+
+  function setActiveTab(nextTab: AdPage | 'all') {
+    setActiveTabState(nextTab);
+    updateUrl(nextTab, device);
+  }
+
+  function setDevice(nextDevice: AdDevice) {
+    setDeviceState(nextDevice);
+    updateUrl(activeTab, nextDevice);
+  }
 
   // "All Ads" tab state - the original flat list+filter view, kept as a fallback covering
   // Roadblock (no page tab of its own) and anything not yet worth a dedicated tab.
@@ -326,7 +373,10 @@ export default function AdvertisementsListPage() {
     <div>
       <div className="page-header">
         <h1>Advertisements</h1>
-        <Link href="/advertisements/new" className="btn btn-primary">
+        <Link
+          href={`/advertisements/new?tab=${activeTab}${activeTab !== 'all' ? `&device=${device}` : ''}`}
+          className="btn btn-primary"
+        >
           New Advertisement
         </Link>
       </div>
@@ -352,7 +402,7 @@ export default function AdvertisementsListPage() {
       </div>
 
       {activeTab !== 'all' ? (
-        <PageZoneBrowser key={activeTab} page={activeTab} />
+        <PageZoneBrowser key={activeTab} page={activeTab} device={device} onDeviceChange={setDevice} />
       ) : (
         <>
           <div className="toolbar">
@@ -473,7 +523,7 @@ export default function AdvertisementsListPage() {
                         />
                       </td>
                       <td>
-                        <Link href={`/advertisements/${a.id}`}>{a.name}</Link>
+                        <Link href={`/advertisements/${a.id}?tab=all`}>{a.name}</Link>
                       </td>
                       <td>{AD_ZONE_LABELS[a.zone]}</td>
                       <td>
@@ -541,5 +591,13 @@ export default function AdvertisementsListPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function AdvertisementsListPage() {
+  return (
+    <Suspense>
+      <AdvertisementsListPageInner />
+    </Suspense>
   );
 }
