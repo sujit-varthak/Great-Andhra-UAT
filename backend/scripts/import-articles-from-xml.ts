@@ -103,14 +103,14 @@ export interface CategoryDef {
 // undefined) when that's genuinely all the post has.
 const GENERIC_CATEGORY_SLUGS = new Set(['uncategorized', 'articles', 'movies']);
 
-// "Latest News" is a homepage-feed marker in the source site, not a real
-// topic - the XML's own nicename for it is "lastest-news" (a typo baked into
-// the export itself, not ours; matching "latest-news" too in case a
-// differently-exported file spells it correctly). A post carrying this
-// category should be flagged isTrending, and this category should never be
-// used as the article's actual assigned category - skip past it to whatever
-// real topic category the post also has.
-const LATEST_NEWS_SLUGS = new Set(['lastest-news', 'latest-news']);
+// These are homepage-feed/UI markers in the source site, not real topics -
+// "Latest News" (XML nicename "lastest-news", a typo baked into the export
+// itself, not ours - matching "latest-news" too in case a differently-
+// exported file spells it correctly) and "Talk Of The Town", which in THIS
+// system is the isTalkOfTheTown boolean flag, not a Category row. A post
+// carrying either should never have it picked as its actual assigned
+// category - skip past it to whatever real topic category the post also has.
+const LATEST_NEWS_SLUGS = new Set(['lastest-news', 'latest-news', 'talk-of-the-town']);
 
 // Some categories only exist in the WordPress export as a near-duplicate of
 // a real, already-curated category (different slug, same topic) - confirmed
