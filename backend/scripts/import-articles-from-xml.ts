@@ -112,10 +112,6 @@ const GENERIC_CATEGORY_SLUGS = new Set(['uncategorized', 'articles', 'movies']);
 // real topic category the post also has.
 const LATEST_NEWS_SLUGS = new Set(['lastest-news', 'latest-news']);
 
-function isLatestNews(categories: ParsedCategory[]): boolean {
-  return categories.some((c) => LATEST_NEWS_SLUGS.has(c.slug));
-}
-
 // Some categories only exist in the WordPress export as a near-duplicate of
 // a real, already-curated category (different slug, same topic) - confirmed
 // by hand after reviewing what showed up outside the curated set. Not a
@@ -492,8 +488,7 @@ async function verify(xmlPath: string) {
   if (noCategoryCount > 0) {
     console.log(`${noCategoryCount} post(s) have no category at all - will be created uncategorized.`);
   }
-  const trendingCount = toImport.filter((p) => isLatestNews(p.categories)).length;
-  console.log(`${trendingCount}/${toImport.length} will be flagged isTrending (post has a "Latest News" category).`);
+  console.log(`All ${toImport.length} will be flagged isTrending: true (newly-imported content defaults to trending).`);
   console.log('\nNo network requests made, no writes made. Re-run with --apply once these numbers look right.');
 }
 
@@ -553,7 +548,14 @@ async function apply(xmlPath: string, authorId: string) {
             authorId,
             featuredImageUrl: images[j],
             legacyPostId: post.legacyPostId,
-            isTrending: isLatestNews(post.categories),
+            // "Latest News" isn't a real topic - it's just this site's own
+            // marker for "newly published." Some export batches (file 9)
+            // carry it as an explicit category; others (file 5+) don't tag
+            // it at all. Rather than depend on a category that may or may
+            // not exist in a given file, freshly-imported content defaults
+            // to trending unconditionally - matching how a manually-created
+            // article in the admin normally starts with Trending selected.
+            isTrending: true,
             status: isPublished ? 'PUBLISHED' : 'DRAFT',
             publishedAt,
             tags: tagIds.length ? { create: tagIds.map((tagId) => ({ tagId })) } : undefined,
