@@ -48,7 +48,7 @@ async function run(xmlPath: string, apply: boolean) {
 
     if (apply) {
       const categoryId = primary
-        ? await resolveCategoryChain(primary.slug, categoryDefs, categoryCache, primary.name)
+        ? await resolveCategoryChain(prisma, primary.slug, categoryDefs, categoryCache, primary.name)
         : null;
       await prisma.article.update({ where: { id: article.id }, data: { categoryId } });
     }

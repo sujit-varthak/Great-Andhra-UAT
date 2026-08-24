@@ -1,44 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { XMLParser } from 'fast-xml-parser';
 import slugify from 'slugify';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { MediaService } from '../../media/media.service';
-
-interface ParsedCategory {
-  name: string;
-  slug: string;
-}
-
-interface ParsedPost {
-  legacyPostId: number;
-  title: string;
-  bodyHtml: string;
-  categories: ParsedCategory[];
-  tags: ParsedCategory[];
-  featuredImageUrl?: string;
-}
+import { parseXml, ParsedPost } from './xml-stream-parser';
+import { pickPrimaryCategory, ParsedCategory } from './xml-category-mapping';
+import { resolveCategoryChain } from './category-resolver';
 
 interface ImportWarning {
   legacyPostId: number;
   title: string;
   message: string;
-}
-
-// Category articles land in gets isTrending checked automatically - matches
-// the one category->flag rule already implicit in the existing data.
-const AUTO_TRENDING_CATEGORY_SLUG = 'latest-news';
-
-const parser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: '@_',
-  textNodeName: '#text',
-  trimValues: true,
-});
-
-function asArray<T>(value: T | T[] | undefined): T[] {
-  if (value === undefined) return [];
-  return Array.isArray(value) ? value : [value];
 }
 
 @Injectable()
@@ -51,106 +23,53 @@ export class ArticleImportService {
     private readonly mediaService: MediaService,
   ) {}
 
-  // Parses the WXR (WordPress eXtended RSS) buffer into just the real posts,
-  // with their category/tag names, body HTML, and resolved featured-image URL
-  // (attachments live as separate <item>s in the same file, linked via a
-  // _thumbnail_id postmeta pointing at the attachment's wp:post_id).
-  private parsePosts(xml: Buffer): ParsedPost[] {
-    const parsed = parser.parse(xml.toString('utf-8'));
-    const items = asArray(parsed?.rss?.channel?.item);
-
-    const attachmentUrlByPostId = new Map<number, string>();
-    for (const item of items) {
-      if (item['wp:post_type'] !== 'attachment') continue;
-      const postId = Number(item['wp:post_id']);
-      const url = item['wp:attachment_url'];
-      if (postId && url) attachmentUrlByPostId.set(postId, String(url));
-    }
-
-    const posts: ParsedPost[] = [];
-    for (const item of items) {
-      if (item['wp:post_type'] !== 'post') continue;
-      if (item['wp:status'] === 'trash') continue;
-
-      const legacyPostId = Number(item['wp:post_id']);
-      if (!legacyPostId) continue;
-
-      const categoryEntries = asArray(item.category);
-      const categories: ParsedCategory[] = [];
-      const tags: ParsedCategory[] = [];
-      for (const entry of categoryEntries) {
-        const parsedEntry = {
-          name: String(entry['#text'] ?? entry),
-          slug: String(entry['@_nicename'] ?? slugify(String(entry['#text'] ?? entry), { lower: true, strict: true })),
-        };
-        if (entry['@_domain'] === 'post_tag') tags.push(parsedEntry);
-        else if (entry['@_domain'] === 'category') categories.push(parsedEntry);
-      }
-
-      const thumbnailId = asArray(item['wp:postmeta'])
-        .filter((m) => m?.['wp:meta_key'] === '_thumbnail_id')
-        .map((m) => Number(m['wp:meta_value']))[0];
-      const featuredImageUrl = thumbnailId ? attachmentUrlByPostId.get(thumbnailId) : undefined;
-
-      posts.push({
-        legacyPostId,
-        title: String(item.title ?? '(untitled)'),
-        bodyHtml: String(item['content:encoded'] ?? ''),
-        categories,
-        tags,
-        featuredImageUrl,
-      });
-    }
-    return posts;
-  }
-
-  async preview(xml: Buffer) {
-    const posts = this.parsePosts(xml);
+  // xmlPath points at a temp file on disk (see article-import.controller.ts's
+  // diskStorage config) - streamed via `sax` instead of loading the whole
+  // file and a full parsed DOM into memory, which is what repeatedly
+  // OOM-crashed this endpoint on large export files.
+  async preview(xmlPath: string) {
+    const { posts, categoryDefs } = await parseXml(xmlPath);
     const existing = await this.prisma.article.findMany({
       where: { legacyPostId: { in: posts.map((p) => p.legacyPostId) } },
       select: { legacyPostId: true },
     });
     const existingIds = new Set(existing.map((e) => e.legacyPostId));
+    const toImport = posts.filter((p) => !existingIds.has(p.legacyPostId));
 
-    const existingCategories = await this.prisma.category.findMany({ select: { name: true, slug: true } });
+    const existingCategories = await this.prisma.category.findMany({ select: { slug: true } });
     const existingSlugs = new Set(existingCategories.map((c) => c.slug));
-    const existingNamesLower = new Set(existingCategories.map((c) => c.name.toLowerCase()));
     const newCategorySlugs = new Set<string>();
-    for (const post of posts) {
-      // Only the first category is ever actually assigned (see below) - a
-      // post's 2nd/3rd listed category never gets created, so checking all
-      // of them here would report categories the commit step never touches.
-      // Matches upsertCategory's slug-then-name fallback, so a stale/typo'd
-      // slug for a category that already exists under the same name (this
-      // happened for real with "Latest News") isn't reported as "new".
-      const primary = post.categories[0];
+    const multiCategoryWarnings: ImportWarning[] = [];
+    for (const post of toImport) {
+      if (post.categories.length > 1) {
+        multiCategoryWarnings.push({
+          legacyPostId: post.legacyPostId,
+          title: post.title,
+          message: `Has ${post.categories.length} categories - the most specific one will be used.`,
+        });
+      }
+      const primary = pickPrimaryCategory(post.categories);
       if (!primary) continue;
-      const matchesExisting =
-        existingSlugs.has(primary.slug) || existingNamesLower.has(primary.name.toLowerCase());
-      if (!matchesExisting) newCategorySlugs.add(primary.slug);
+      for (const slug of ancestorChain(primary.slug, categoryDefs)) {
+        if (!existingSlugs.has(slug)) newCategorySlugs.add(slug);
+      }
     }
 
-    const toImport = posts.filter((p) => !existingIds.has(p.legacyPostId));
     const duplicates = posts.length - toImport.length;
-    const multiCategoryWarnings: ImportWarning[] = posts
-      .filter((p) => p.categories.length > 1)
-      .map((p) => ({
-        legacyPostId: p.legacyPostId,
-        title: p.title,
-        message: `Has ${p.categories.length} categories - only the first ("${p.categories[0].name}") will be used.`,
-      }));
+    const withImage = toImport.filter((p) => p.featuredImageUrl).length;
 
     return {
       totalInFile: posts.length,
       willImport: toImport.length,
       duplicatesSkipped: duplicates,
+      willHaveFeaturedImage: withImage,
       newCategories: [...newCategorySlugs],
       warnings: multiCategoryWarnings,
     };
   }
 
-  async commit(xml: Buffer, actorId: string) {
-    const posts = this.parsePosts(xml);
+  async commit(xmlPath: string, actorId: string) {
+    const { posts, categoryDefs } = await parseXml(xmlPath);
     const existing = await this.prisma.article.findMany({
       where: { legacyPostId: { in: posts.map((p) => p.legacyPostId) } },
       select: { legacyPostId: true },
@@ -158,18 +77,16 @@ export class ArticleImportService {
     const existingIds = new Set(existing.map((e) => e.legacyPostId));
     const toImport = posts.filter((p) => !existingIds.has(p.legacyPostId));
 
-    const trendingCategory = await this.prisma.category.findUnique({
-      where: { slug: AUTO_TRENDING_CATEGORY_SLUG },
-    });
-
     let created = 0;
+    const categoryCache = new Map<string, string>();
     const warnings: ImportWarning[] = [];
     const failures: ImportWarning[] = [];
 
     for (const post of toImport) {
       try {
-        const categoryId = post.categories.length
-          ? (await this.upsertCategory(post.categories[0])).id
+        const primary = pickPrimaryCategory(post.categories);
+        const categoryId = primary
+          ? await resolveCategoryChain(this.prisma, primary.slug, categoryDefs, categoryCache, primary.name)
           : null;
         const tagIds = await Promise.all(post.tags.map((t) => this.upsertTag(t)));
 
@@ -186,7 +103,9 @@ export class ArticleImportService {
         const bodyHtml = await this.reuploadInlineImages(actorId, post.bodyHtml, post);
 
         const slug = await this.uniqueSlug(post.title);
-        const isTrending = Boolean(trendingCategory && categoryId === trendingCategory.id);
+        const isPublished = post.status === 'publish';
+        const parsedDate = post.postDate ? new Date(post.postDate.replace(' ', 'T')) : null;
+        const publishedAt = isPublished && parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null;
 
         const article = await this.prisma.article.create({
           data: {
@@ -197,8 +116,17 @@ export class ArticleImportService {
             authorId: actorId,
             featuredImageUrl,
             legacyPostId: post.legacyPostId,
-            isTrending,
-            status: 'DRAFT',
+            // Freshly-imported content defaults to trending, matching how a
+            // manually-created article in the admin normally starts with
+            // Trending selected - not conditioned on any one category tag,
+            // since which categories a given export batch carries varies.
+            isTrending: true,
+            // A real featured image is what "featured" content means here -
+            // matches the criteria applied to the file-9 backfill (mark
+            // every article that has one, leave the rest unmarked).
+            isFeatured: Boolean(featuredImageUrl),
+            status: isPublished ? 'PUBLISHED' : 'DRAFT',
+            publishedAt,
             tags: tagIds.length ? { create: tagIds.map((tagId) => ({ tagId })) } : undefined,
           },
         });
@@ -230,25 +158,6 @@ export class ArticleImportService {
     };
   }
 
-  // Matches by slug first, then falls back to an exact (case-insensitive)
-  // name match before creating anything new. Source exports can carry an
-  // old/typo'd slug for a category that's since been renamed on this end
-  // (this happened for real with "Latest News" - the XML still says
-  // nicename="lastest-news") - without the name fallback, every import
-  // would spawn a fresh duplicate under the stale slug instead of reusing
-  // the category that's already there.
-  private async upsertCategory(cat: ParsedCategory) {
-    const bySlug = await this.prisma.category.findUnique({ where: { slug: cat.slug } });
-    if (bySlug) return bySlug;
-
-    const byName = await this.prisma.category.findFirst({
-      where: { name: { equals: cat.name, mode: 'insensitive' } },
-    });
-    if (byName) return byName;
-
-    return this.prisma.category.create({ data: { name: cat.name, slug: cat.slug } });
-  }
-
   private async upsertTag(tag: ParsedCategory): Promise<string> {
     const bySlug = await this.prisma.tag.findUnique({ where: { slug: tag.slug } });
     if (bySlug) return bySlug.id;
@@ -263,7 +172,7 @@ export class ArticleImportService {
   }
 
   private async uniqueSlug(title: string): Promise<string> {
-    const base = slugify(title, { lower: true, strict: true });
+    const base = slugify(title, { lower: true, strict: true }) || 'post';
     let slug = base;
     let suffix = 2;
     // eslint-disable-next-line no-constant-condition
@@ -276,7 +185,7 @@ export class ArticleImportService {
 
   private async reuploadImage(actorId: string, url: string, post: ParsedPost): Promise<string | null> {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const buffer = Buffer.from(await res.arrayBuffer());
       const uploaded = await this.mediaService.uploadImage(actorId, buffer);
@@ -307,4 +216,16 @@ export class ArticleImportService {
     }
     return updated;
   }
+}
+
+function ancestorChain(slug: string, categoryDefs: Map<string, import('./xml-category-mapping').CategoryDef>): string[] {
+  const chain: string[] = [];
+  const seen = new Set<string>();
+  let current: string | undefined = slug;
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    chain.push(current);
+    current = categoryDefs.get(current)?.parentSlug ?? undefined;
+  }
+  return chain;
 }
