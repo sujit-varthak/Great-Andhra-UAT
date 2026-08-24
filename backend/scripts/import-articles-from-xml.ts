@@ -18,6 +18,10 @@
  *    never creates duplicates - it just skips posts already present
  *  - gets status PUBLISHED (with publishedAt from the XML's wp:post_date)
  *    if the original WordPress post was published, DRAFT otherwise
+ *  - gets its category resolved through the XML's own parent/child category
+ *    tree (the channel-level <wp:category> definitions, distinct from the
+ *    per-post <category> tags) - unlike article-import.service.ts's flat
+ *    upsertCategory(), a child category here creates/links its parent too
  *
  * Usage:
  *   npx ts-node scripts/import-articles-from-xml.ts --file=/path/to/export.xml --verify
@@ -80,14 +84,40 @@ interface ParsedPost {
   featuredImageUrl?: string;
 }
 
+// The channel-level taxonomy definition for one category - <wp:category
+// nicename="movie-news">, with its <wp:category_parent> (empty for a
+// top-level category). Distinct from the per-post <category domain="..."
+// nicename="..."> tags, which only say "this post has this category" with
+// no hierarchy information.
+interface CategoryDef {
+  name: string;
+  parentSlug: string | null;
+}
+
+// Most posts in this export carry multiple categories (WordPress adds
+// "Uncategorized" - or other catch-all buckets like "Articles"/"Movies" seen
+// in this specific export - alongside whatever real category was assigned).
+// Picking whichever category happens to come first in the XML would often
+// land an article in a generic bucket instead of its actual topic, so prefer
+// the first non-generic category and only fall back to a generic one (or
+// undefined) when that's genuinely all the post has.
+const GENERIC_CATEGORY_SLUGS = new Set(['uncategorized', 'articles', 'movies']);
+
+function pickPrimaryCategory(categories: ParsedCategory[]): ParsedCategory | undefined {
+  if (categories.length === 0) return undefined;
+  return categories.find((c) => !GENERIC_CATEGORY_SLUGS.has(c.slug)) ?? categories[0];
+}
+
 // Single-pass streaming parse, mirroring fix-images-from-xml.ts's parseXml():
-// one walk of the file builds both the attachment-id->url map and the post
-// list, since a post's <item> and the attachment <item> its _thumbnail_id
-// points at can appear in either order in the file.
-function parseXml(filePath: string): Promise<{ posts: ParsedPost[] }> {
+// one walk of the file builds the attachment-id->url map, the post list, AND
+// the channel-level category taxonomy, since a post's <item> and the
+// attachment <item> its _thumbnail_id points at can appear in either order,
+// and <wp:category> definitions live outside any <item> entirely.
+function parseXml(filePath: string): Promise<{ posts: ParsedPost[]; categoryDefs: Map<string, CategoryDef> }> {
   return new Promise((resolve, reject) => {
     const parser = sax.createStream(true, { trim: false });
     const attachmentUrlByPostId = new Map<number, string>();
+    const categoryDefs = new Map<string, CategoryDef>();
     const rawPosts: Array<{
       postId: number | null;
       title: string;
@@ -109,9 +139,15 @@ function parseXml(filePath: string): Promise<{ posts: ParsedPost[] }> {
     let pendingMetaKey: string | null = null;
     let itemCount = 0;
 
+    let inCategoryDef = false;
+    let currentCategoryDef: { nicename: string; name: string; parentSlug: string } | null = null;
+
     parser.on('opentag', (node) => {
       currentText = '';
-      if (node.name === 'item') {
+      if (!inItem && node.name === 'wp:category') {
+        inCategoryDef = true;
+        currentCategoryDef = { nicename: '', name: '', parentSlug: '' };
+      } else if (node.name === 'item') {
         inItem = true;
         current = {
           postId: null,
@@ -143,7 +179,36 @@ function parseXml(filePath: string): Promise<{ posts: ParsedPost[] }> {
     });
 
     parser.on('closetag', (name) => {
-      if (!inItem || !current) return;
+      if (inCategoryDef && currentCategoryDef) {
+        switch (name) {
+          case 'wp:category_nicename':
+            currentCategoryDef.nicename = currentText.trim();
+            break;
+          case 'wp:cat_name':
+            currentCategoryDef.name = currentText.trim();
+            break;
+          case 'wp:category_parent':
+            currentCategoryDef.parentSlug = currentText.trim();
+            break;
+          case 'wp:category':
+            if (currentCategoryDef.nicename) {
+              categoryDefs.set(currentCategoryDef.nicename, {
+                name: currentCategoryDef.name || currentCategoryDef.nicename,
+                parentSlug: currentCategoryDef.parentSlug || null,
+              });
+            }
+            inCategoryDef = false;
+            currentCategoryDef = null;
+            break;
+        }
+        currentText = '';
+        return;
+      }
+
+      if (!inItem || !current) {
+        currentText = '';
+        return;
+      }
       switch (name) {
         case 'title':
           if (!current.title) current.title = currentText.trim();
@@ -167,11 +232,11 @@ function parseXml(filePath: string): Promise<{ posts: ParsedPost[] }> {
           current.attachmentUrl = currentText.trim();
           break;
         case 'category': {
-          const name = currentText.trim();
-          if (name) {
+          const name2 = currentText.trim();
+          if (name2) {
             const entry = {
-              name,
-              slug: current.catNicename || slugify(name, { lower: true, strict: true }),
+              name: name2,
+              slug: current.catNicename || slugify(name2, { lower: true, strict: true }),
             };
             if (current.catDomain === 'post_tag') current.tags.push(entry);
             else if (current.catDomain === 'category') current.categories.push(entry);
@@ -218,19 +283,62 @@ function parseXml(filePath: string): Promise<{ posts: ParsedPost[] }> {
         tags: p.tags,
         featuredImageUrl: p.thumbnailId ? attachmentUrlByPostId.get(p.thumbnailId) : undefined,
       }));
-      resolve({ posts });
+      resolve({ posts, categoryDefs });
     });
 
     createReadStream(filePath).pipe(parser as unknown as NodeJS.WritableStream);
   });
 }
 
-async function upsertCategory(cat: ParsedCategory) {
-  const bySlug = await prisma.category.findUnique({ where: { slug: cat.slug } });
-  if (bySlug) return bySlug;
-  const byName = await prisma.category.findFirst({ where: { name: { equals: cat.name, mode: 'insensitive' } } });
-  if (byName) return byName;
-  return prisma.category.create({ data: { name: cat.name, slug: cat.slug } });
+// Resolves (and creates if needed) a category AND its full parent chain, so
+// a child category is never created floating without its parent. `seen`
+// guards against a circular parent chain in the source data (shouldn't
+// happen, but climbing forever on bad data is worse than stopping early).
+async function resolveCategoryChain(
+  slug: string,
+  categoryDefs: Map<string, CategoryDef>,
+  cache: Map<string, string>,
+  fallbackName: string,
+  seen: Set<string> = new Set(),
+): Promise<string> {
+  const cached = cache.get(slug);
+  if (cached) return cached;
+
+  const def = categoryDefs.get(slug);
+  const name = def?.name || fallbackName;
+  let parentId: string | null = null;
+  if (def?.parentSlug && def.parentSlug !== slug && !seen.has(def.parentSlug)) {
+    seen.add(slug);
+    parentId = await resolveCategoryChain(def.parentSlug, categoryDefs, cache, def.parentSlug, seen);
+  }
+
+  const bySlug = await prisma.category.findUnique({ where: { slug } });
+  if (bySlug) {
+    cache.set(slug, bySlug.id);
+    return bySlug.id;
+  }
+  const byName = await prisma.category.findFirst({ where: { name: { equals: name, mode: 'insensitive' } } });
+  if (byName) {
+    cache.set(slug, byName.id);
+    return byName.id;
+  }
+  const created = await prisma.category.create({ data: { name, slug, parentId } });
+  cache.set(slug, created.id);
+  return created.id;
+}
+
+// Walks a category's ancestor chain purely from the parsed definitions (no
+// DB access) - used by verify() to preview what would be created.
+function ancestorChain(slug: string, categoryDefs: Map<string, CategoryDef>): string[] {
+  const chain: string[] = [];
+  const seen = new Set<string>();
+  let current: string | undefined = slug;
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    chain.push(current);
+    current = categoryDefs.get(current)?.parentSlug ?? undefined;
+  }
+  return chain;
 }
 
 async function upsertTag(tag: ParsedCategory): Promise<string> {
@@ -284,36 +392,44 @@ async function loadExistingLegacyIds(): Promise<Set<number>> {
 
 async function verify(xmlPath: string) {
   logMemory('before parse');
-  const { posts } = await parseXml(xmlPath);
+  const { posts, categoryDefs } = await parseXml(xmlPath);
   logMemory('after parse');
 
   const existingIds = await loadExistingLegacyIds();
   const toImport = posts.filter((p) => !existingIds.has(p.legacyPostId));
   const withImage = toImport.filter((p) => p.featuredImageUrl).length;
 
-  const existingCategories = await prisma.category.findMany({ select: { name: true, slug: true } });
+  const existingCategories = await prisma.category.findMany({ select: { slug: true } });
   const existingSlugs = new Set(existingCategories.map((c) => c.slug));
-  const existingNamesLower = new Set(existingCategories.map((c) => c.name.toLowerCase()));
-  const newCategorySlugs = new Set<string>();
+
+  const neededSlugs = new Set<string>();
   let multiCategoryCount = 0;
+  let noCategoryCount = 0;
   for (const post of toImport) {
     if (post.categories.length > 1) multiCategoryCount += 1;
-    const primary = post.categories[0];
+    if (post.categories.length === 0) noCategoryCount += 1;
+    const primary = pickPrimaryCategory(post.categories);
     if (!primary) continue;
-    if (!existingSlugs.has(primary.slug) && !existingNamesLower.has(primary.name.toLowerCase())) {
-      newCategorySlugs.add(primary.slug);
-    }
+    for (const slug of ancestorChain(primary.slug, categoryDefs)) neededSlugs.add(slug);
   }
+  const newSlugs = [...neededSlugs].filter((s) => !existingSlugs.has(s));
+  const describe = (slug: string) => {
+    const parent = categoryDefs.get(slug)?.parentSlug;
+    return parent ? `${slug} (child of ${parent})` : slug;
+  };
 
   console.log(`${posts.length} post(s) in the XML.`);
   console.log(`${posts.length - toImport.length} already imported (matched by legacyPostId) - will be skipped.`);
   console.log(`${toImport.length} will be created.`);
   console.log(`${withImage}/${toImport.length} of those have a resolvable featured image (will be uploaded to R2).`);
   console.log(
-    `${newCategorySlugs.size} new categor${newCategorySlugs.size === 1 ? 'y' : 'ies'} will be created${newCategorySlugs.size ? ': ' + [...newCategorySlugs].join(', ') : ''}.`,
+    `${newSlugs.length} new categor${newSlugs.length === 1 ? 'y' : 'ies'} will be created (including any parent categories)${newSlugs.length ? ':\n  ' + newSlugs.map(describe).join('\n  ') : '.'}`,
   );
   if (multiCategoryCount > 0) {
-    console.log(`${multiCategoryCount} post(s) have more than one category - only the first will be used.`);
+    console.log(`${multiCategoryCount} post(s) have more than one category - the most specific non-generic one will be used.`);
+  }
+  if (noCategoryCount > 0) {
+    console.log(`${noCategoryCount} post(s) have no category at all - will be created uncategorized.`);
   }
   console.log('Every created article will be flagged isTrending: true.');
   console.log('\nNo network requests made, no writes made. Re-run with --apply once these numbers look right.');
@@ -333,13 +449,14 @@ async function apply(xmlPath: string, authorId: string) {
   });
 
   logMemory('before parse');
-  const { posts } = await parseXml(xmlPath);
+  const { posts, categoryDefs } = await parseXml(xmlPath);
   logMemory('after parse');
 
   const existingIds = await loadExistingLegacyIds();
   const toImport = posts.filter((p) => !existingIds.has(p.legacyPostId));
   console.log(`Importing ${toImport.length} post(s) (${posts.length - toImport.length} already present, skipped)...`);
 
+  const categoryCache = new Map<string, string>();
   let created = 0;
   let withImage = 0;
   const failures: { legacyPostId: number; title: string; error: string }[] = [];
@@ -355,7 +472,10 @@ async function apply(xmlPath: string, authorId: string) {
     for (let j = 0; j < batch.length; j++) {
       const post = batch[j];
       try {
-        const categoryId = post.categories.length ? (await upsertCategory(post.categories[0])).id : null;
+        const primary = pickPrimaryCategory(post.categories);
+        const categoryId = primary
+          ? await resolveCategoryChain(primary.slug, categoryDefs, categoryCache, primary.name)
+          : null;
         const tagIds = await Promise.all(post.tags.map((t) => upsertTag(t)));
         const slug = await uniqueSlug(post.title);
         const isPublished = post.status === 'publish';
