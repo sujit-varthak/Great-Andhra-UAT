@@ -122,6 +122,42 @@ function pickPrimaryCategory(categories: ParsedCategory[]): ParsedCategory | und
   return candidates.find((c) => !GENERIC_CATEGORY_SLUGS.has(c.slug)) ?? candidates[0];
 }
 
+// None of the 10 WordPress export files carry any <wp:category> hierarchy
+// data at all (checked directly - zero <wp:category> blocks in any of them),
+// so parseXml's channel-level taxonomy parsing below always finds nothing.
+// This is the real parent/child structure instead, extracted from the
+// pre-clear-backup-2026-08-24.dump snapshot of the categories table as it
+// existed before clear-articles.ts ran - hand-built by admins in the live
+// panel over 2026-07-22 through 2026-07-30, not something derivable from any
+// XML file. Any category slug not listed here (e.g. one that only exists in
+// the WordPress export and was never curated in the admin, like
+// "movies-gossip" or "nostalgia") is created flat, same as before.
+const KNOWN_CATEGORIES: Record<string, CategoryDef> = {
+  politics: { name: 'Politics', parentSlug: null },
+  movies: { name: 'Movies', parentSlug: null },
+  sports: { name: 'Sports', parentSlug: null },
+  business: { name: 'Business', parentSlug: null },
+  technology: { name: 'Technology', parentSlug: null },
+  articles: { name: 'Articles', parentSlug: null },
+  'special-news': { name: 'Special News', parentSlug: null },
+  audio: { name: 'Audio', parentSlug: null },
+  'box-office': { name: 'Box Office', parentSlug: null },
+  'political-news': { name: 'Political News', parentSlug: null },
+  interviews: { name: 'Interviews', parentSlug: null },
+  'about-us': { name: 'About Us', parentSlug: null },
+  uncategorized: { name: 'Uncategorized', parentSlug: null },
+  'big-story': { name: 'Big Story', parentSlug: null },
+  'latest-news': { name: 'Latest News', parentSlug: null },
+  'movie-news': { name: 'Movie-news', parentSlug: 'movies' },
+  opinion: { name: 'Opinion', parentSlug: 'politics' },
+  'movie-gossip': { name: 'movie-gossip', parentSlug: 'movies' },
+  'andhra-news': { name: 'andhra-news', parentSlug: 'politics' },
+  reviews: { name: 'reviews', parentSlug: 'movies' },
+  'special-articles': { name: 'Special Articles', parentSlug: 'articles' },
+  'telangana-news': { name: 'Telangana News', parentSlug: 'politics' },
+  gossip: { name: 'Gossip', parentSlug: 'politics' },
+};
+
 // Single-pass streaming parse, mirroring fix-images-from-xml.ts's parseXml():
 // one walk of the file builds the attachment-id->url map, the post list, AND
 // the channel-level category taxonomy, since a post's <item> and the
@@ -131,7 +167,7 @@ function parseXml(filePath: string): Promise<{ posts: ParsedPost[]; categoryDefs
   return new Promise((resolve, reject) => {
     const parser = sax.createStream(true, { trim: false });
     const attachmentUrlByPostId = new Map<number, string>();
-    const categoryDefs = new Map<string, CategoryDef>();
+    const categoryDefs = new Map<string, CategoryDef>(Object.entries(KNOWN_CATEGORIES));
     const rawPosts: Array<{
       postId: number | null;
       title: string;
