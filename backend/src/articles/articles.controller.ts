@@ -29,6 +29,7 @@ export class ArticlesController {
     @Query('status') status?: ArticleStatus,
     @Query('categoryId') categoryId?: string,
     @Query('tagId') tagId?: string,
+    @Query('search') search?: string,
     @Query('skip') skip?: string,
     @Query('take') take?: string,
   ) {
@@ -36,6 +37,7 @@ export class ArticlesController {
       status,
       categoryId,
       tagId,
+      search,
       skip: skip ? Number(skip) : undefined,
       take: take ? Number(take) : undefined,
     });

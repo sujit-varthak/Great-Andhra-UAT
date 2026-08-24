@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch, ApiError } from '@/lib/api';
 import { ArticleListItem, ArticleStatus } from '@/lib/types';
@@ -27,18 +27,35 @@ export default function ArticlesListPage() {
   const [articles, setArticles] = useState<ArticleListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [jumpValue, setJumpValue] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  // Debounce the search box - reset to page 1 whenever the committed search
+  // term actually changes, same pattern as the Tags list page.
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 250);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchInput]);
 
   function load() {
     setLoading(true);
     const qs = new URLSearchParams({ take: String(pageSize), skip: String((page - 1) * pageSize) });
     if (statusFilter) qs.set('status', statusFilter);
+    if (search) qs.set('search', search);
     apiFetch<{ items: ArticleListItem[]; total: number }>(`/articles?${qs}`)
       .then((res) => {
         setArticles(res.items);
@@ -48,7 +65,7 @@ export default function ArticlesListPage() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(load, [statusFilter, page, pageSize]);
+  useEffect(load, [statusFilter, search, page, pageSize]);
 
   function goToPage(target: number) {
     const clamped = Math.min(Math.max(target, 1), totalPages);
@@ -87,6 +104,12 @@ export default function ArticlesListPage() {
       </div>
 
       <div className="toolbar">
+        <input
+          placeholder="Search by title…"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          style={{ minWidth: 220 }}
+        />
         <select
           value={statusFilter}
           onChange={(e) => {

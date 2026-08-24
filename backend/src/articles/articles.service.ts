@@ -78,11 +78,12 @@ export class ArticlesService {
     // }
   }
 
-  async list(filters: { status?: ArticleStatus; categoryId?: string; tagId?: string; skip?: number; take?: number }) {
+  async list(filters: { status?: ArticleStatus; categoryId?: string; tagId?: string; search?: string; skip?: number; take?: number }) {
     const where: Record<string, unknown> = {};
     if (filters.status) where.status = filters.status;
     if (filters.categoryId) where.categoryId = filters.categoryId;
     if (filters.tagId) where.tags = { some: { tagId: filters.tagId } };
+    if (filters.search) where.title = { contains: filters.search, mode: 'insensitive' };
 
     const [items, total] = await Promise.all([
       this.prisma.article.findMany({
