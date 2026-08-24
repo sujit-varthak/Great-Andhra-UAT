@@ -30,7 +30,11 @@ export class S3Service {
       }),
     );
 
-    const publicBase = process.env.S3_PUBLIC_URL_BASE || `${process.env.S3_ENDPOINT}/${this.bucket}`;
+    // Strip any trailing slash so a misconfigured env var (e.g.
+    // S3_PUBLIC_URL_BASE with a trailing "/") can't produce a doubled slash
+    // before the key - R2 serves that as a 404, a distinct object key, not
+    // the same file.
+    const publicBase = (process.env.S3_PUBLIC_URL_BASE || `${process.env.S3_ENDPOINT}/${this.bucket}`).replace(/\/+$/, '');
     return `${publicBase}/${key}`;
   }
 }
