@@ -365,8 +365,12 @@ async function apply(xmlPath: string) {
     const batch = broken.slice(i, i + CONCURRENCY);
     const results = await Promise.all(batch.map((item) => fixOne(item, client, bucket, publicBase)));
     results.forEach((result, j) => {
-      if (result.ok) fixed += 1;
-      else failures.push({ matchedBy: batch[j].matchedBy, key: batch[j].key, error: result.error });
+      if (result.ok) {
+        fixed += 1;
+      } else {
+        const error: string = result.error;
+        failures.push({ matchedBy: batch[j].matchedBy, key: batch[j].key, error });
+      }
     });
     console.log(`  ${Math.min(i + CONCURRENCY, broken.length)}/${broken.length} processed (${fixed} fixed so far)...`);
   }
