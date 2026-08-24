@@ -73,7 +73,7 @@ interface ParsedCategory {
   slug: string;
 }
 
-interface ParsedPost {
+export interface ParsedPost {
   legacyPostId: number;
   title: string;
   bodyHtml: string;
@@ -89,7 +89,7 @@ interface ParsedPost {
 // top-level category). Distinct from the per-post <category domain="..."
 // nicename="..."> tags, which only say "this post has this category" with
 // no hierarchy information.
-interface CategoryDef {
+export interface CategoryDef {
   name: string;
   parentSlug: string | null;
 }
@@ -120,13 +120,31 @@ const CATEGORY_SLUG_ALIASES: Record<string, string> = {
   'movies-gossip': 'movie-gossip',
 };
 
-function pickPrimaryCategory(categories: ParsedCategory[]): ParsedCategory | undefined {
+export function pickPrimaryCategory(categories: ParsedCategory[]): ParsedCategory | undefined {
   const candidates = categories.filter((c) => !LATEST_NEWS_SLUGS.has(c.slug));
   if (candidates.length === 0) return undefined;
-  const picked = candidates.find((c) => !GENERIC_CATEGORY_SLUGS.has(c.slug)) ?? candidates[0];
-  const aliasedSlug = CATEGORY_SLUG_ALIASES[picked.slug];
-  if (!aliasedSlug) return picked;
-  return { name: KNOWN_CATEGORIES[aliasedSlug]?.name ?? aliasedSlug, slug: aliasedSlug };
+
+  const normalized = candidates.map((c) => {
+    const aliasedSlug = CATEGORY_SLUG_ALIASES[c.slug];
+    return aliasedSlug ? { name: KNOWN_CATEGORIES[aliasedSlug]?.name ?? aliasedSlug, slug: aliasedSlug } : c;
+  });
+
+  // Prefer a more specific (child) category over its own parent when a post
+  // is tagged with both - e.g. "Politics" + "Telangana News" should use
+  // Telangana News, not lose it to whichever happened to come first in the
+  // XML's arbitrary per-post category order. Without this, every post that
+  // also carries its category's parent gets mapped to the broader parent
+  // instead - this is what silently mis-mapped all 90 Telangana News posts
+  // in file 9 to plain "Politics".
+  const specific = normalized.filter((c) => {
+    const hasChildAlsoPresent = normalized.some(
+      (other) => other.slug !== c.slug && KNOWN_CATEGORIES[other.slug]?.parentSlug === c.slug,
+    );
+    return !hasChildAlsoPresent;
+  });
+  const pool = specific.length > 0 ? specific : normalized;
+
+  return pool.find((c) => !GENERIC_CATEGORY_SLUGS.has(c.slug)) ?? pool[0];
 }
 
 // None of the 10 WordPress export files carry any <wp:category> hierarchy
@@ -139,7 +157,7 @@ function pickPrimaryCategory(categories: ParsedCategory[]): ParsedCategory | und
 // XML file. Any category slug not listed here (e.g. one that only exists in
 // the WordPress export and was never curated in the admin, like
 // "movies-gossip" or "nostalgia") is created flat, same as before.
-const KNOWN_CATEGORIES: Record<string, CategoryDef> = {
+export const KNOWN_CATEGORIES: Record<string, CategoryDef> = {
   politics: { name: 'Politics', parentSlug: null },
   movies: { name: 'Movies', parentSlug: null },
   sports: { name: 'Sports', parentSlug: null },
@@ -170,7 +188,7 @@ const KNOWN_CATEGORIES: Record<string, CategoryDef> = {
 // the channel-level category taxonomy, since a post's <item> and the
 // attachment <item> its _thumbnail_id points at can appear in either order,
 // and <wp:category> definitions live outside any <item> entirely.
-function parseXml(filePath: string): Promise<{ posts: ParsedPost[]; categoryDefs: Map<string, CategoryDef> }> {
+export function parseXml(filePath: string): Promise<{ posts: ParsedPost[]; categoryDefs: Map<string, CategoryDef> }> {
   return new Promise((resolve, reject) => {
     const parser = sax.createStream(true, { trim: false });
     const attachmentUrlByPostId = new Map<number, string>();
@@ -351,7 +369,7 @@ function parseXml(filePath: string): Promise<{ posts: ParsedPost[]; categoryDefs
 // a child category is never created floating without its parent. `seen`
 // guards against a circular parent chain in the source data (shouldn't
 // happen, but climbing forever on bad data is worse than stopping early).
-async function resolveCategoryChain(
+export async function resolveCategoryChain(
   slug: string,
   categoryDefs: Map<string, CategoryDef>,
   cache: Map<string, string>,
@@ -598,9 +616,13 @@ async function main() {
   }
 }
 
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+// Guarded so recategorize-existing.ts (and any future script) can import
+// this module's functions without triggering a second CLI run.
+if (require.main === module) {
+  main()
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}
