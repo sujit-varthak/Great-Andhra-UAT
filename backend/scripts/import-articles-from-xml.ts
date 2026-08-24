@@ -103,9 +103,23 @@ interface CategoryDef {
 // undefined) when that's genuinely all the post has.
 const GENERIC_CATEGORY_SLUGS = new Set(['uncategorized', 'articles', 'movies']);
 
+// "Latest News" is a homepage-feed marker in the source site, not a real
+// topic - the XML's own nicename for it is "lastest-news" (a typo baked into
+// the export itself, not ours; matching "latest-news" too in case a
+// differently-exported file spells it correctly). A post carrying this
+// category should be flagged isTrending, and this category should never be
+// used as the article's actual assigned category - skip past it to whatever
+// real topic category the post also has.
+const LATEST_NEWS_SLUGS = new Set(['lastest-news', 'latest-news']);
+
+function isLatestNews(categories: ParsedCategory[]): boolean {
+  return categories.some((c) => LATEST_NEWS_SLUGS.has(c.slug));
+}
+
 function pickPrimaryCategory(categories: ParsedCategory[]): ParsedCategory | undefined {
-  if (categories.length === 0) return undefined;
-  return categories.find((c) => !GENERIC_CATEGORY_SLUGS.has(c.slug)) ?? categories[0];
+  const candidates = categories.filter((c) => !LATEST_NEWS_SLUGS.has(c.slug));
+  if (candidates.length === 0) return undefined;
+  return candidates.find((c) => !GENERIC_CATEGORY_SLUGS.has(c.slug)) ?? candidates[0];
 }
 
 // Single-pass streaming parse, mirroring fix-images-from-xml.ts's parseXml():
@@ -431,7 +445,8 @@ async function verify(xmlPath: string) {
   if (noCategoryCount > 0) {
     console.log(`${noCategoryCount} post(s) have no category at all - will be created uncategorized.`);
   }
-  console.log('Every created article will be flagged isTrending: true.');
+  const trendingCount = toImport.filter((p) => isLatestNews(p.categories)).length;
+  console.log(`${trendingCount}/${toImport.length} will be flagged isTrending (post has a "Latest News" category).`);
   console.log('\nNo network requests made, no writes made. Re-run with --apply once these numbers look right.');
 }
 
@@ -491,7 +506,7 @@ async function apply(xmlPath: string, authorId: string) {
             authorId,
             featuredImageUrl: images[j],
             legacyPostId: post.legacyPostId,
-            isTrending: true,
+            isTrending: isLatestNews(post.categories),
             status: isPublished ? 'PUBLISHED' : 'DRAFT',
             publishedAt,
             tags: tagIds.length ? { create: tagIds.map((tagId) => ({ tagId })) } : undefined,
