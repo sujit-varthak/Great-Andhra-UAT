@@ -220,6 +220,8 @@ export type AdZone =
   | 'BOXOFFICE_MOBILE_BANNER'
   | 'BOXOFFICE_STICKY_AD'
   | 'BOXOFFICE_REVIEW_AD'
+  | 'LISTPAGE_SIDEBAR_LEFT'
+  | 'LISTPAGE_SIDEBAR_RIGHT'
   | 'LISTPAGE_CONTENT_AD'
   | 'LISTPAGE_TOP_BANNER'
   | 'LISTPAGE_MOBILE_BANNER'
@@ -253,6 +255,8 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   BOXOFFICE_MOBILE_BANNER: 'Box Office - Top Banner (Mobile)',
   BOXOFFICE_STICKY_AD: 'Box Office - Sticky Scroll Ad (stays fixed as user scrolls)',
   BOXOFFICE_REVIEW_AD: 'Box Office - Review Ad',
+  LISTPAGE_SIDEBAR_LEFT: 'List Page - Sidebar Left',
+  LISTPAGE_SIDEBAR_RIGHT: 'List Page - Sidebar Right',
   LISTPAGE_CONTENT_AD: 'List Page - In-Content Ad (category/tag pages)',
   LISTPAGE_TOP_BANNER: 'List Page - Top Banner (Desktop)',
   LISTPAGE_MOBILE_BANNER: 'List Page - Top Banner (Mobile)',
@@ -287,6 +291,8 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   BOXOFFICE_MOBILE_BANNER: { width: '380px', height: '90px' },
   BOXOFFICE_STICKY_AD: { width: '300px', height: '250px' },
   BOXOFFICE_REVIEW_AD: { width: '300px', height: '250px' },
+  LISTPAGE_SIDEBAR_LEFT: { width: '160px', height: 'any' },
+  LISTPAGE_SIDEBAR_RIGHT: { width: '160px', height: 'any' },
   LISTPAGE_CONTENT_AD: { width: '300px', height: '250px' },
   LISTPAGE_TOP_BANNER: { width: '728px', height: '90px' },
   LISTPAGE_MOBILE_BANNER: { width: '380px', height: '90px' },
@@ -326,6 +332,8 @@ export const AD_ZONE_PAGE: Record<Exclude<AdZone, 'ROADBLOCK'>, AdPage> = {
   BOXOFFICE_MOBILE_BANNER: 'boxoffice',
   BOXOFFICE_STICKY_AD: 'boxoffice',
   BOXOFFICE_REVIEW_AD: 'boxoffice',
+  LISTPAGE_SIDEBAR_LEFT: 'listpage',
+  LISTPAGE_SIDEBAR_RIGHT: 'listpage',
   LISTPAGE_CONTENT_AD: 'listpage',
   LISTPAGE_TOP_BANNER: 'listpage',
   LISTPAGE_MOBILE_BANNER: 'listpage',
@@ -382,6 +390,8 @@ export const AD_ZONE_DEVICE: Record<Exclude<AdZone, 'ROADBLOCK'>, AdDevice> = {
   BOXOFFICE_MOBILE_BANNER: 'mobile',
   BOXOFFICE_STICKY_AD: 'both',
   BOXOFFICE_REVIEW_AD: 'both',
+  LISTPAGE_SIDEBAR_LEFT: 'desktop',
+  LISTPAGE_SIDEBAR_RIGHT: 'desktop',
   LISTPAGE_CONTENT_AD: 'both',
   LISTPAGE_TOP_BANNER: 'desktop',
   LISTPAGE_MOBILE_BANNER: 'mobile',
