@@ -96,9 +96,15 @@ export class ArticlesService {
           status: true,
           viewCount: true,
           updatedAt: true,
+          publishedAt: true,
           category: { select: { id: true, name: true } },
         },
-        orderBy: { createdAt: 'desc' },
+        // Sorted by the article's real publish date, not when its row landed
+        // in this database - otherwise an older post imported after a newer
+        // one is already live would jump to the top just for being imported
+        // more recently. Falls back to createdAt for anything with no
+        // publishedAt yet (a fresh, never-published draft).
+        orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
         skip: filters.skip ?? 0,
         take: filters.take ?? 25,
       }),
@@ -306,39 +312,43 @@ export class ArticlesService {
     return withUrlPath(article);
   }
 
-  // Big Story feed: published articles flagged isBigStory, most-recently-updated
-  // first. Multiple articles can carry the flag — the caller picks the front of
-  // this list as the hero and the rest as related.
+  // Big Story feed: published articles flagged isBigStory, real publish date
+  // first (not last-touched) - so an unrelated backend update (a bulk
+  // recategorization, an image backfill, anything that isn't actually
+  // re-promoting this article) can never silently bump one flagged article
+  // above another the editor genuinely meant to be on top. Multiple articles
+  // can carry the flag — the caller picks the front of this list as the hero
+  // and the rest as related.
   async findBigStoryFeed(take = 4) {
     const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isBigStory: true },
       include: articleInclude,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { publishedAt: 'desc' },
       take,
     });
     return items.map(withUrlPath);
   }
 
-  // Trending feed: published articles flagged isTrending, most-recently-updated
+  // Trending feed: published articles flagged isTrending, real publish date
   // first. Backend returns a fixed upper bound; the frontend trims to however
   // many actually fit based on title length.
   async findTrendingFeed(take = 17) {
     const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isTrending: true },
       include: articleInclude,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { publishedAt: 'desc' },
       take,
     });
     return items.map(withUrlPath);
   }
 
-  // Talk of the Town feed: published articles flagged isTalkOfTheTown, capped
-  // at 5 regardless of how many carry the flag.
+  // Talk of the Town feed: published articles flagged isTalkOfTheTown, real
+  // publish date first, capped at 5 regardless of how many carry the flag.
   async findTalkOfTheTownFeed(take = 5) {
     const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isTalkOfTheTown: true },
       include: articleInclude,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { publishedAt: 'desc' },
       take,
     });
     return items.map(withUrlPath);
