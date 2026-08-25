@@ -207,6 +207,7 @@ export type AdZone =
   | 'HOMEPAGE_OPINION_BANNER'
   | 'HOMEPAGE_ARTICLE_WIDGET_AD'
   | 'HOMEPAGE_MOBILE_AFTER_BIGSTORY_AD'
+  | 'HOMEPAGE_MOBILE_BEFORE_LATEST_NEWS_AD'
   | 'INNER_SIDEBAR_LEFT'
   | 'INNER_SIDEBAR_RIGHT'
   | 'INNER_TOP_BANNER'
@@ -232,7 +233,7 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   HOMEPAGE_SIDEBAR_RIGHT: 'Homepage - Sidebar Right',
   HOMEPAGE_TOP_BANNER: 'Homepage - Top Banner (Desktop)',
   HOMEPAGE_SECTION_INLINE: 'Homepage - Below Talk of Town Ad',
-  HOMEPAGE_MOBILE_BANNER: 'Homepage - Main Ad (Between Menu and Big Story Section)',
+  HOMEPAGE_MOBILE_BANNER: 'Homepage - Main Ad (Between Menu and Big Story Section - mobile)',
   HOMEPAGE_ABOVE_HEADER_BANNER: 'Homepage - Above Header Banner (990px, top of page)',
   HOMEPAGE_STRIP_BANNER_1: 'Homepage - Strip Banner 1 (Above Big Story)',
   HOMEPAGE_STRIP_BANNER_2: 'Homepage - Strip Banner 2 (Above Latest News Tabs)',
@@ -242,6 +243,7 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   HOMEPAGE_OPINION_BANNER: 'Homepage - Opinion Section Banner',
   HOMEPAGE_ARTICLE_WIDGET_AD: 'Homepage - Ad Below Top Trending Topics (Above Articles Section, Right Column)',
   HOMEPAGE_MOBILE_AFTER_BIGSTORY_AD: 'Homepage - After Big Story Articles Ad (Mobile)',
+  HOMEPAGE_MOBILE_BEFORE_LATEST_NEWS_AD: 'Homepage - Between Big Story and Latest News (Mobile)',
   INNER_SIDEBAR_LEFT: 'Article Page - Sidebar Left',
   INNER_SIDEBAR_RIGHT: 'Article Page - Sidebar Right',
   INNER_TOP_BANNER: 'Article Page - Top Banner (Desktop)',
@@ -278,6 +280,7 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   HOMEPAGE_OPINION_BANNER: { width: '728px', height: '90px' },
   HOMEPAGE_ARTICLE_WIDGET_AD: { width: '300px', height: '250px' },
   HOMEPAGE_MOBILE_AFTER_BIGSTORY_AD: { width: '380px', height: '250px' },
+  HOMEPAGE_MOBILE_BEFORE_LATEST_NEWS_AD: { width: '300px', height: '250px' },
   INNER_SIDEBAR_LEFT: { width: '160px', height: 'any' },
   INNER_SIDEBAR_RIGHT: { width: '160px', height: 'any' },
   INNER_TOP_BANNER: { width: '728px', height: '90px' },
@@ -319,6 +322,7 @@ export const AD_ZONE_PAGE: Record<Exclude<AdZone, 'ROADBLOCK'>, AdPage> = {
   HOMEPAGE_OPINION_BANNER: 'home',
   HOMEPAGE_ARTICLE_WIDGET_AD: 'home',
   HOMEPAGE_MOBILE_AFTER_BIGSTORY_AD: 'home',
+  HOMEPAGE_MOBILE_BEFORE_LATEST_NEWS_AD: 'home',
   INNER_SIDEBAR_LEFT: 'inner',
   INNER_SIDEBAR_RIGHT: 'inner',
   INNER_TOP_BANNER: 'inner',
@@ -377,6 +381,7 @@ export const AD_ZONE_DEVICE: Record<Exclude<AdZone, 'ROADBLOCK'>, AdDevice> = {
   HOMEPAGE_OPINION_BANNER: 'desktop',
   HOMEPAGE_ARTICLE_WIDGET_AD: 'desktop',
   HOMEPAGE_MOBILE_AFTER_BIGSTORY_AD: 'mobile',
+  HOMEPAGE_MOBILE_BEFORE_LATEST_NEWS_AD: 'mobile',
   INNER_SIDEBAR_LEFT: 'desktop',
   INNER_SIDEBAR_RIGHT: 'desktop',
   INNER_TOP_BANNER: 'desktop',
