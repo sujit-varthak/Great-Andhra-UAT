@@ -94,12 +94,20 @@ export function AdvertisementForm({ advertisement }: Props) {
     advertisement?.zone ?? (zoneFromUrl && AD_ZONE_LABELS[zoneFromUrl] ? zoneFromUrl : 'HOMEPAGE_SIDEBAR_LEFT'),
   );
 
-  // Image field - a zone is either a desktop placement or a mobile placement (never both
-  // anymore), so one image is enough; it's saved as imageUrlDesktop on the backend regardless
-  // of which kind of zone it is, and ga_render_ad() on the frontend already falls back to
-  // imageUrlDesktop when imageUrlMobile is unset for whichever device context it's rendering.
+  // Every other zone is inherently a desktop placement or a mobile placement (never both), so
+  // one image is enough - saved as imageUrlDesktop regardless of which kind of zone it is, and
+  // ga_render_ad() on the frontend already falls back to imageUrlDesktop when imageUrlMobile is
+  // unset for whichever device context it's rendering. Roadblock is the one exception - it's
+  // shown on both desktop and mobile at once, so it genuinely needs two separate images; see
+  // the two-uploader branch below.
   const [imageUrl, setImageUrl] = useState<string | null>(
     advertisement?.imageUrlDesktop ?? advertisement?.imageUrlMobile ?? null,
+  );
+  const [roadblockImageDesktop, setRoadblockImageDesktop] = useState<string | null>(
+    advertisement?.imageUrlDesktop ?? null,
+  );
+  const [roadblockImageMobile, setRoadblockImageMobile] = useState<string | null>(
+    advertisement?.imageUrlMobile ?? null,
   );
   const [landingUrl, setLandingUrl] = useState(advertisement?.landingUrl ?? '');
 
@@ -145,8 +153,8 @@ export function AdvertisementForm({ advertisement }: Props) {
     }
 
     if (type === 'IMAGE') {
-      if (!imageUrl) {
-        setError('An image is required');
+      if (isRoadblockZone ? !roadblockImageDesktop : !imageUrl) {
+        setError(isRoadblockZone ? 'A desktop image is required' : 'An image is required');
         return;
       }
       if (!landingUrl.trim()) {
@@ -165,7 +173,11 @@ export function AdvertisementForm({ advertisement }: Props) {
     const payload = {
       name,
       type,
-      imageUrlDesktop: imageUrl || undefined,
+      imageUrlDesktop: (isRoadblockZone ? roadblockImageDesktop : imageUrl) || undefined,
+      // Mobile falls back to the desktop image on the frontend when unset, so this is only
+      // sent for Roadblock (the one zone shown on both devices at once) - every other zone
+      // stays desktop-image-only, matching its single-device nature.
+      imageUrlMobile: isRoadblockZone ? roadblockImageMobile || undefined : undefined,
       landingUrl: landingUrl || undefined,
       scriptCode: scriptCode || undefined,
       zone,
@@ -279,9 +291,28 @@ export function AdvertisementForm({ advertisement }: Props) {
         {/* IMAGE Type */}
         {type === 'IMAGE' && (
           <>
-            <div>
-              <ImageUploader value={imageUrl} onChange={setImageUrl} label="Image" />
-            </div>
+            {isRoadblockZone ? (
+              <div className="field-row">
+                <div>
+                  <ImageUploader
+                    value={roadblockImageDesktop}
+                    onChange={setRoadblockImageDesktop}
+                    label="Desktop Image"
+                  />
+                </div>
+                <div>
+                  <ImageUploader
+                    value={roadblockImageMobile}
+                    onChange={setRoadblockImageMobile}
+                    label="Mobile Image (optional - falls back to desktop image if left empty)"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <ImageUploader value={imageUrl} onChange={setImageUrl} label="Image" />
+              </div>
+            )}
 
             <div className="field">
               <label htmlFor="landingUrl">Landing URL</label>
