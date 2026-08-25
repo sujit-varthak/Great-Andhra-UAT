@@ -13,6 +13,7 @@ export class PublicArticlesController {
     @Query('categoryId') categoryId?: string,
     @Query('includeChildren') includeChildren?: string,
     @Query('tagId') tagId?: string,
+    @Query('isTrending') isTrending?: string,
     @Query('skip') skip?: string,
     @Query('take') take?: string,
   ) {
@@ -20,6 +21,7 @@ export class PublicArticlesController {
       categoryId,
       includeChildren: includeChildren === 'true',
       tagId,
+      isTrending: isTrending === 'true',
       skip: skip ? Number(skip) : undefined,
       take: take ? Number(take) : undefined,
     });

@@ -248,6 +248,7 @@ export class ArticlesService {
     categoryId?: string;
     includeChildren?: boolean;
     tagId?: string;
+    isTrending?: boolean;
     skip?: number;
     take?: number;
   }) {
@@ -269,6 +270,12 @@ export class ArticlesService {
       status: 'PUBLISHED' as const,
       categoryId: categoryFilter,
       ...(filters.tagId ? { tags: { some: { tagId: filters.tagId } } } : {}),
+      // "Latest News" has no real category in this system (see
+      // xml-category-mapping.ts) - the frontend's Latest News listing page
+      // filters on this flag instead, so it needs real server-side
+      // pagination like any other listing, not the homepage's small
+      // fixed-size trending widget sliced client-side.
+      ...(filters.isTrending ? { isTrending: true } : {}),
     };
     const [items, total] = await Promise.all([
       this.prisma.article.findMany({
