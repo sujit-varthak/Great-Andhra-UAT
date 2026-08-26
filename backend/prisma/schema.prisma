@@ -375,8 +375,34 @@ enum AdZone {
   LISTPAGE_MOBILE_BANNER
   LISTPAGE_MOBILE_MIDDLE_AD
 
-  // Roadblock (full-page interstitial)
+  // Roadblock (full-page interstitial, triggered on cookie-expiry navigation - see
+  // ga_maybe_show_roadblock_ad())
   ROADBLOCK
+
+  // Sitewide (independent of ROADBLOCK - see FULLSCREEN_INTERSTITIAL_AD's own trigger
+  // fields below, and ga_maybe_render_interstitial_ad()/ga_render_bottom_sticky_ad())
+  FULLSCREEN_INTERSTITIAL_AD
+  BOTTOM_STICKY_AD
+}
+
+// Which page a visitor is leaving from / landing on, for FULLSCREEN_INTERSTITIAL_AD's
+// TRANSITION trigger mode. Mirrors the site's actual routing (see .htaccess): bare "/" is
+// HOME, "/{id}/..." is ARTICLE, "/box-office" is BOXOFFICE, everything else category/tag-like
+// is LISTPAGE. ANY matches every page, used as a wildcard on either side of the transition.
+enum GaPageType {
+  HOME
+  ARTICLE
+  BOXOFFICE
+  LISTPAGE
+  ANY
+}
+
+// FULLSCREEN_INTERSTITIAL_AD's trigger mode - TRANSITION fires only when navigating between
+// the specific from/to page types configured on the ad; TIMER fires after a fixed dwell time
+// on any page, regardless of navigation.
+enum InterstitialTriggerType {
+  TRANSITION
+  TIMER
 }
 
 model Advertisement {
@@ -403,6 +429,14 @@ model Advertisement {
   isRoadblock       Boolean   @default(false)
   roadblockDelayMs  Int       @default(15000)
   roadblockCookieTTL Int      @default(900)
+
+  // FULLSCREEN_INTERSTITIAL_AD-specific - all optional/unused by every other zone, including
+  // ROADBLOCK, which stays on its own fields above unchanged.
+  interstitialTriggerType    InterstitialTriggerType?
+  interstitialFromPage       GaPageType?
+  interstitialToPage         GaPageType?
+  interstitialTimerSeconds   Int?
+  interstitialFrequencyHours Int?
 
   // Scheduling
   isActive          Boolean   @default(true)

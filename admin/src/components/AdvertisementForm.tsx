@@ -7,10 +7,13 @@ import {
   Advertisement,
   AdType,
   AdZone,
+  GaPageType,
+  InterstitialTriggerType,
   AD_ZONE_LABELS,
   AD_ZONE_DIMENSIONS,
   AD_ZONE_PAGE,
   AD_ZONE_DEVICE,
+  GA_PAGE_TYPE_LABELS,
 } from '@/lib/types';
 import { ImageUploader } from './ImageUploader';
 
@@ -62,17 +65,29 @@ const AD_ZONES: AdZone[] = [
   'LISTPAGE_MOBILE_BANNER',
   'LISTPAGE_MOBILE_MIDDLE_AD',
   'ROADBLOCK',
+  'FULLSCREEN_INTERSTITIAL_AD',
+  'BOTTOM_STICKY_AD',
 ];
+
+// Zones with no page tab of their own - sitewide, rendered/managed independently of any one
+// page (Roadblock plus the two new zones, which also need two separate creative uploads
+// rather than the single image every page-scoped zone uses).
+type SitewideZone = 'ROADBLOCK' | 'FULLSCREEN_INTERSTITIAL_AD' | 'BOTTOM_STICKY_AD';
+function isSitewideZone(z: AdZone): z is SitewideZone {
+  return z === 'ROADBLOCK' || z === 'FULLSCREEN_INTERSTITIAL_AD' || z === 'BOTTOM_STICKY_AD';
+}
+
+const PAGE_TYPE_OPTIONS: GaPageType[] = ['ANY', 'HOME', 'ARTICLE', 'BOXOFFICE', 'LISTPAGE'];
 
 // Zones that share the incoming zone's page and are compatible with its device (same
 // device, or either side is 'both') - used to scope the dropdown to "only zones relevant
 // to where this ad is being created from" instead of every zone on the whole site.
 function zonesScopedLike(reference: AdZone): AdZone[] {
-  if (reference === 'ROADBLOCK') return AD_ZONES;
+  if (isSitewideZone(reference)) return AD_ZONES;
   const refPage = AD_ZONE_PAGE[reference];
   const refDevice = AD_ZONE_DEVICE[reference];
   return AD_ZONES.filter((z) => {
-    if (z === 'ROADBLOCK') return false;
+    if (isSitewideZone(z)) return false;
     if (AD_ZONE_PAGE[z] !== refPage) return false;
     const zDevice = AD_ZONE_DEVICE[z];
     return zDevice === refDevice || zDevice === 'both' || refDevice === 'both';
@@ -131,6 +146,28 @@ export function AdvertisementForm({ advertisement }: Props) {
     advertisement?.roadblockCookieTTL ?? 900,
   );
 
+  // Full-Screen Interstitial
+  const [interstitialTriggerType, setInterstitialTriggerType] = useState<InterstitialTriggerType>(
+    advertisement?.interstitialTriggerType ?? 'TRANSITION',
+  );
+  const [interstitialFromPage, setInterstitialFromPage] = useState<GaPageType>(
+    advertisement?.interstitialFromPage ?? 'ANY',
+  );
+  const [interstitialToPage, setInterstitialToPage] = useState<GaPageType>(
+    advertisement?.interstitialToPage ?? 'ANY',
+  );
+  const [interstitialTimerSeconds, setInterstitialTimerSeconds] = useState(
+    advertisement?.interstitialTimerSeconds ?? 10,
+  );
+  const [interstitialFrequencyHours, setInterstitialFrequencyHours] = useState(
+    advertisement?.interstitialFrequencyHours ?? 24,
+  );
+
+  // Desktop/Mobile enabled toggles - only user-editable for the sitewide dual-device zones
+  // (every page-scoped zone stays hardcoded on for both, as before).
+  const [showOnDesktop, setShowOnDesktop] = useState(advertisement?.showOnDesktop ?? true);
+  const [showOnMobile, setShowOnMobile] = useState(advertisement?.showOnMobile ?? true);
+
   // Scheduling
   const [isActive, setIsActive] = useState(advertisement?.isActive ?? true);
   const [startDate, setStartDate] = useState(
@@ -149,6 +186,12 @@ export function AdvertisementForm({ advertisement }: Props) {
 
   const zoneDimensions = AD_ZONE_DIMENSIONS[zone];
   const isRoadblockZone = zone === 'ROADBLOCK';
+  const isInterstitialZone = zone === 'FULLSCREEN_INTERSTITIAL_AD';
+  const isStickyZone = zone === 'BOTTOM_STICKY_AD';
+  const isDualDeviceZone = isRoadblockZone || isInterstitialZone || isStickyZone;
+  // Roadblock keeps its existing always-on behavior; the two new sitewide zones expose a
+  // real toggle since Desktop/Mobile enabled controls were explicitly requested for them.
+  const isDeviceToggleableZone = isInterstitialZone || isStickyZone;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -161,8 +204,8 @@ export function AdvertisementForm({ advertisement }: Props) {
     }
 
     if (type === 'IMAGE') {
-      if (isRoadblockZone ? !roadblockImageDesktop : !imageUrl) {
-        setError(isRoadblockZone ? 'A desktop image is required' : 'An image is required');
+      if (isDualDeviceZone ? !roadblockImageDesktop : !imageUrl) {
+        setError(isDualDeviceZone ? 'A desktop image is required' : 'An image is required');
         return;
       }
       if (!landingUrl.trim()) {
@@ -176,26 +219,41 @@ export function AdvertisementForm({ advertisement }: Props) {
       }
     }
 
+    if (isInterstitialZone && interstitialTriggerType === 'TRANSITION' && !interstitialFromPage) {
+      setError('From Page is required for a page-transition trigger');
+      return;
+    }
+    if (isInterstitialZone && interstitialTriggerType === 'TIMER' && !interstitialTimerSeconds) {
+      setError('Timer (seconds) is required for a timer trigger');
+      return;
+    }
+
     setSaving(true);
 
     const payload = {
       name,
       type,
-      imageUrlDesktop: (isRoadblockZone ? roadblockImageDesktop : imageUrl) || undefined,
+      imageUrlDesktop: (isDualDeviceZone ? roadblockImageDesktop : imageUrl) || undefined,
       // Mobile falls back to the desktop image on the frontend when unset, so this is only
-      // sent for Roadblock (the one zone shown on both devices at once) - every other zone
-      // stays desktop-image-only, matching its single-device nature.
-      imageUrlMobile: isRoadblockZone ? roadblockImageMobile || undefined : undefined,
+      // sent for zones shown on both devices at once - every other zone stays desktop-image-only,
+      // matching its single-device nature.
+      imageUrlMobile: isDualDeviceZone ? roadblockImageMobile || undefined : undefined,
       landingUrl: landingUrl || undefined,
       scriptCode: scriptCode || undefined,
       zone,
-      // Every zone is now inherently a desktop zone or a mobile zone (there's no shared
-      // dual-purpose zone left) - always true, no longer a user-editable toggle.
-      showOnDesktop: true,
-      showOnMobile: true,
+      // Every page-scoped zone is inherently a desktop zone or a mobile zone - always true,
+      // not a user-editable toggle. The sitewide zones that explicitly asked for Desktop/Mobile
+      // enabled controls (interstitial, sticky) use the real state instead.
+      showOnDesktop: isDeviceToggleableZone ? showOnDesktop : true,
+      showOnMobile: isDeviceToggleableZone ? showOnMobile : true,
       isRoadblock: isRoadblockZone ? true : isRoadblock,
       roadblockDelayMs: isRoadblockZone ? roadblockDelayMs : undefined,
       roadblockCookieTTL: isRoadblockZone ? roadblockCookieTTL : undefined,
+      interstitialTriggerType: isInterstitialZone ? interstitialTriggerType : undefined,
+      interstitialFromPage: isInterstitialZone && interstitialTriggerType === 'TRANSITION' ? interstitialFromPage : undefined,
+      interstitialToPage: isInterstitialZone && interstitialTriggerType === 'TRANSITION' ? interstitialToPage : undefined,
+      interstitialTimerSeconds: isInterstitialZone && interstitialTriggerType === 'TIMER' ? interstitialTimerSeconds : undefined,
+      interstitialFrequencyHours: isInterstitialZone ? interstitialFrequencyHours : undefined,
       isActive,
       startDate: new Date(startDate).toISOString(),
       endDate: endDate ? new Date(endDate).toISOString() : undefined,
@@ -299,7 +357,7 @@ export function AdvertisementForm({ advertisement }: Props) {
         {/* IMAGE Type */}
         {type === 'IMAGE' && (
           <>
-            {isRoadblockZone ? (
+            {isDualDeviceZone ? (
               <div className="field-row">
                 <div>
                   <ImageUploader
@@ -384,6 +442,120 @@ export function AdvertisementForm({ advertisement }: Props) {
               />
               <small>How long before the ad shows again (e.g., 900 = 15 minutes)</small>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interstitial Settings */}
+      {isInterstitialZone && (
+        <div className="card">
+          <h3>Interstitial Settings</h3>
+
+          <div className="field">
+            <label>Trigger</label>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  checked={interstitialTriggerType === 'TRANSITION'}
+                  onChange={() => setInterstitialTriggerType('TRANSITION')}
+                />
+                Specific Page Transition
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  checked={interstitialTriggerType === 'TIMER'}
+                  onChange={() => setInterstitialTriggerType('TIMER')}
+                />
+                Timer (time on site)
+              </label>
+            </div>
+          </div>
+
+          {interstitialTriggerType === 'TRANSITION' ? (
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor="interstitialFromPage">From Page</label>
+                <select
+                  id="interstitialFromPage"
+                  value={interstitialFromPage}
+                  onChange={(e) => setInterstitialFromPage(e.target.value as GaPageType)}
+                >
+                  {PAGE_TYPE_OPTIONS.map((p) => (
+                    <option key={p} value={p}>
+                      {GA_PAGE_TYPE_LABELS[p]}
+                    </option>
+                  ))}
+                </select>
+                <small>Only fires when leaving this page ("Any Page" matches every referrer)</small>
+              </div>
+
+              <div className="field">
+                <label htmlFor="interstitialToPage">To Page</label>
+                <select
+                  id="interstitialToPage"
+                  value={interstitialToPage}
+                  onChange={(e) => setInterstitialToPage(e.target.value as GaPageType)}
+                >
+                  {PAGE_TYPE_OPTIONS.map((p) => (
+                    <option key={p} value={p}>
+                      {GA_PAGE_TYPE_LABELS[p]}
+                    </option>
+                  ))}
+                </select>
+                <small>Only fires when landing on this page ("Any Page" matches every destination)</small>
+              </div>
+            </div>
+          ) : (
+            <div className="field">
+              <label htmlFor="interstitialTimerSeconds">Show After (seconds on site)</label>
+              <input
+                id="interstitialTimerSeconds"
+                type="number"
+                value={interstitialTimerSeconds}
+                onChange={(e) => setInterstitialTimerSeconds(Number(e.target.value))}
+                min="1"
+              />
+              <small>Fires on any page once the visitor has been on the site this long</small>
+            </div>
+          )}
+
+          <div className="field">
+            <label htmlFor="interstitialFrequencyHours">Display Frequency (hours)</label>
+            <input
+              id="interstitialFrequencyHours"
+              type="number"
+              value={interstitialFrequencyHours}
+              onChange={(e) => setInterstitialFrequencyHours(Number(e.target.value))}
+              min="1"
+            />
+            <small>How long before this ad can show again to the same visitor (e.g., 24 = once a day)</small>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop/Mobile enabled toggles - only for the sitewide zones that need them */}
+      {isDeviceToggleableZone && (
+        <div className="card">
+          <h3>Device Availability</h3>
+          <div style={{ display: 'flex', gap: '1.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={showOnDesktop}
+                onChange={(e) => setShowOnDesktop(e.target.checked)}
+              />
+              Desktop enabled
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={showOnMobile}
+                onChange={(e) => setShowOnMobile(e.target.checked)}
+              />
+              Mobile enabled
+            </label>
           </div>
         </div>
       )}

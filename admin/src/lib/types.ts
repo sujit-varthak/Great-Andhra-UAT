@@ -233,7 +233,23 @@ export type AdZone =
   | 'LISTPAGE_TOP_BANNER'
   | 'LISTPAGE_MOBILE_BANNER'
   | 'LISTPAGE_MOBILE_MIDDLE_AD'
-  | 'ROADBLOCK';
+  | 'ROADBLOCK'
+  | 'FULLSCREEN_INTERSTITIAL_AD'
+  | 'BOTTOM_STICKY_AD';
+
+// For FULLSCREEN_INTERSTITIAL_AD's TRANSITION trigger mode - which page a visitor is
+// leaving/landing on. Mirrors the site's actual routing (see the frontend's .htaccess).
+export type GaPageType = 'HOME' | 'ARTICLE' | 'BOXOFFICE' | 'LISTPAGE' | 'ANY';
+
+export const GA_PAGE_TYPE_LABELS: Record<GaPageType, string> = {
+  HOME: 'Home Page',
+  ARTICLE: 'Article Page',
+  BOXOFFICE: 'Box Office',
+  LISTPAGE: 'List Page (category/tag)',
+  ANY: 'Any Page',
+};
+
+export type InterstitialTriggerType = 'TRANSITION' | 'TIMER';
 
 export const AD_ZONE_LABELS: Record<AdZone, string> = {
   HOMEPAGE_SIDEBAR_LEFT: 'Homepage - Sidebar Left',
@@ -277,6 +293,8 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   LISTPAGE_MOBILE_BANNER: 'List Page - Top Banner (Mobile)',
   LISTPAGE_MOBILE_MIDDLE_AD: 'List Page - Middle of List (Mobile)',
   ROADBLOCK: 'Roadblock (Full-page Interstitial)',
+  FULLSCREEN_INTERSTITIAL_AD: 'Full-Screen Interstitial (sitewide overlay)',
+  BOTTOM_STICKY_AD: 'Bottom Sticky / Floating Ad (sitewide)',
 };
 
 export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string }> = {
@@ -323,14 +341,17 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   LISTPAGE_MOBILE_BANNER: { width: '380px', height: '90px' },
   LISTPAGE_MOBILE_MIDDLE_AD: { width: '300px', height: '250px' },
   ROADBLOCK: { width: 'flexible', height: 'flexible' },
+  FULLSCREEN_INTERSTITIAL_AD: { width: 'up to 500px', height: 'up to 80vh' },
+  BOTTOM_STICKY_AD: { width: '336px (desktop) / full-width bar (mobile)', height: '280px (desktop) / ~90px (mobile)' },
 };
 
 // Which page each zone belongs to, for the Advertisements page's per-page tabs. A zone
-// appears in exactly one tab's dropdown - ROADBLOCK has no page tab (it's a full-page
-// interstitial, shown from its own "Roadblock" tab/section instead).
+// appears in exactly one tab's dropdown - ROADBLOCK, FULLSCREEN_INTERSTITIAL_AD, and
+// BOTTOM_STICKY_AD have no page tab (they're sitewide, managed via "All Ads" + the zone
+// dropdown in the New/Edit Advertisement form instead of a per-page tab).
 export type AdPage = 'home' | 'inner' | 'boxoffice' | 'listpage';
 
-export const AD_ZONE_PAGE: Record<Exclude<AdZone, 'ROADBLOCK'>, AdPage> = {
+export const AD_ZONE_PAGE: Record<Exclude<AdZone, 'ROADBLOCK' | 'FULLSCREEN_INTERSTITIAL_AD' | 'BOTTOM_STICKY_AD'>, AdPage> = {
   HOMEPAGE_SIDEBAR_LEFT: 'home',
   HOMEPAGE_SIDEBAR_RIGHT: 'home',
   HOMEPAGE_TOP_BANNER: 'home',
@@ -396,7 +417,7 @@ export const AD_PAGE_LABELS: Record<AdPage, string> = {
 // was just done for HOMEPAGE_BIG_STORY_BANNER -> HOMEPAGE_MOBILE_AFTER_BIGSTORY_AD.
 export type AdDevice = 'desktop' | 'mobile' | 'both';
 
-export const AD_ZONE_DEVICE: Record<Exclude<AdZone, 'ROADBLOCK'>, AdDevice> = {
+export const AD_ZONE_DEVICE: Record<Exclude<AdZone, 'ROADBLOCK' | 'FULLSCREEN_INTERSTITIAL_AD' | 'BOTTOM_STICKY_AD'>, AdDevice> = {
   HOMEPAGE_SIDEBAR_LEFT: 'desktop',
   HOMEPAGE_SIDEBAR_RIGHT: 'desktop',
   HOMEPAGE_TOP_BANNER: 'desktop',
@@ -453,6 +474,11 @@ export interface Advertisement {
   isRoadblock: boolean;
   roadblockDelayMs: number;
   roadblockCookieTTL: number;
+  interstitialTriggerType: InterstitialTriggerType | null;
+  interstitialFromPage: GaPageType | null;
+  interstitialToPage: GaPageType | null;
+  interstitialTimerSeconds: number | null;
+  interstitialFrequencyHours: number | null;
   isActive: boolean;
   startDate: string;
   endDate: string | null;

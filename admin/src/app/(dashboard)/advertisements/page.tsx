@@ -57,6 +57,8 @@ const AD_ZONES: AdZone[] = [
   'LISTPAGE_MOBILE_BANNER',
   'LISTPAGE_MOBILE_MIDDLE_AD',
   'ROADBLOCK',
+  'FULLSCREEN_INTERSTITIAL_AD',
+  'BOTTOM_STICKY_AD',
 ];
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
@@ -66,14 +68,14 @@ const PAGE_TABS: AdPage[] = ['home', 'inner', 'boxoffice', 'listpage'];
 const DEVICE_TABS: AdDevice[] = ['desktop', 'mobile'];
 const DEVICE_LABELS: Record<AdDevice, string> = { desktop: 'Desktop', mobile: 'Mobile', both: 'Both' };
 
-function zonesForPage(page: AdPage): Array<Exclude<AdZone, 'ROADBLOCK'>> {
+function zonesForPage(page: AdPage): Array<Exclude<AdZone, 'ROADBLOCK' | 'FULLSCREEN_INTERSTITIAL_AD' | 'BOTTOM_STICKY_AD'>> {
   return (Object.keys(AD_ZONE_PAGE) as Array<keyof typeof AD_ZONE_PAGE>).filter(
     (z) => AD_ZONE_PAGE[z] === page,
   );
 }
 
 // A zone tagged 'both' (no dedicated device counterpart) appears under either sub-tab.
-function zonesForPageAndDevice(page: AdPage, device: AdDevice): Array<Exclude<AdZone, 'ROADBLOCK'>> {
+function zonesForPageAndDevice(page: AdPage, device: AdDevice): Array<Exclude<AdZone, 'ROADBLOCK' | 'FULLSCREEN_INTERSTITIAL_AD' | 'BOTTOM_STICKY_AD'>> {
   return zonesForPage(page).filter((z) => AD_ZONE_DEVICE[z] === device || AD_ZONE_DEVICE[z] === 'both');
 }
 

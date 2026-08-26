@@ -1,5 +1,5 @@
 import { IsString, IsEnum, IsOptional, IsUrl, IsBoolean, IsInt, Min, Max, IsDateString } from 'class-validator';
-import { AdType, AdZone } from '@prisma/client';
+import { AdType, AdZone, GaPageType, InterstitialTriggerType } from '@prisma/client';
 
 export class CreateAdvertisementDto {
   @IsString()
@@ -46,6 +46,29 @@ export class CreateAdvertisementDto {
   @IsInt()
   @Min(60)
   roadblockCookieTTL?: number;
+
+  // FULLSCREEN_INTERSTITIAL_AD-specific
+  @IsOptional()
+  @IsEnum(InterstitialTriggerType)
+  interstitialTriggerType?: InterstitialTriggerType;
+
+  @IsOptional()
+  @IsEnum(GaPageType)
+  interstitialFromPage?: GaPageType;
+
+  @IsOptional()
+  @IsEnum(GaPageType)
+  interstitialToPage?: GaPageType;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  interstitialTimerSeconds?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  interstitialFrequencyHours?: number;
 
   @IsDateString()
   startDate: string;
