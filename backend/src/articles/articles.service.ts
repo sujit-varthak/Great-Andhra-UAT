@@ -332,7 +332,7 @@ export class ArticlesService {
   // Trending feed: published articles flagged isTrending, real publish date
   // first. Backend returns a fixed upper bound; the frontend trims to however
   // many actually fit based on title length.
-  async findTrendingFeed(take = 17) {
+  async findTrendingFeed(take = 19) {
     const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isTrending: true },
       include: articleInclude,
