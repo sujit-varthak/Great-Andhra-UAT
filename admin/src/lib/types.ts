@@ -232,6 +232,7 @@ export type AdZone =
   | 'LISTPAGE_CONTENT_AD'
   | 'LISTPAGE_TOP_BANNER'
   | 'LISTPAGE_MOBILE_BANNER'
+  | 'LISTPAGE_MOBILE_MIDDLE_AD'
   | 'ROADBLOCK';
 
 export const AD_ZONE_LABELS: Record<AdZone, string> = {
@@ -274,6 +275,7 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   LISTPAGE_CONTENT_AD: 'List Page - In-Content Ad (category/tag pages)',
   LISTPAGE_TOP_BANNER: 'List Page - Top Banner (Desktop)',
   LISTPAGE_MOBILE_BANNER: 'List Page - Top Banner (Mobile)',
+  LISTPAGE_MOBILE_MIDDLE_AD: 'List Page - Middle of List (Mobile)',
   ROADBLOCK: 'Roadblock (Full-page Interstitial)',
 };
 
@@ -319,6 +321,7 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   LISTPAGE_CONTENT_AD: { width: '300px', height: '250px' },
   LISTPAGE_TOP_BANNER: { width: '728px', height: '90px' },
   LISTPAGE_MOBILE_BANNER: { width: '380px', height: '90px' },
+  LISTPAGE_MOBILE_MIDDLE_AD: { width: '300px', height: '250px' },
   ROADBLOCK: { width: 'flexible', height: 'flexible' },
 };
 
@@ -367,6 +370,7 @@ export const AD_ZONE_PAGE: Record<Exclude<AdZone, 'ROADBLOCK'>, AdPage> = {
   LISTPAGE_CONTENT_AD: 'listpage',
   LISTPAGE_TOP_BANNER: 'listpage',
   LISTPAGE_MOBILE_BANNER: 'listpage',
+  LISTPAGE_MOBILE_MIDDLE_AD: 'listpage',
 };
 
 export const AD_PAGE_LABELS: Record<AdPage, string> = {
@@ -432,6 +436,7 @@ export const AD_ZONE_DEVICE: Record<Exclude<AdZone, 'ROADBLOCK'>, AdDevice> = {
   LISTPAGE_CONTENT_AD: 'both',
   LISTPAGE_TOP_BANNER: 'desktop',
   LISTPAGE_MOBILE_BANNER: 'mobile',
+  LISTPAGE_MOBILE_MIDDLE_AD: 'mobile',
 };
 
 export interface Advertisement {
