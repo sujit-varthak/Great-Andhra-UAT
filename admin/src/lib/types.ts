@@ -213,6 +213,7 @@ export type AdZone =
   | 'HOMEPAGE_MOBILE_AFTER_OPINION_AD'
   | 'HOMEPAGE_MOBILE_BETWEEN_MOVIE_NEWS_GOSSIP_AD'
   | 'HOMEPAGE_MOBILE_AFTER_TRENDING_TOPICS_AD'
+  | 'HOMEPAGE_AFTER_POLITICS_GOSSIP_AD'
   | 'INNER_SIDEBAR_LEFT'
   | 'INNER_SIDEBAR_RIGHT'
   | 'INNER_TOP_BANNER'
@@ -254,6 +255,7 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   HOMEPAGE_MOBILE_AFTER_OPINION_AD: 'Homepage - After Opinion Section (Mobile)',
   HOMEPAGE_MOBILE_BETWEEN_MOVIE_NEWS_GOSSIP_AD: 'Homepage - Between Movie News and Movie Gossip (Mobile)',
   HOMEPAGE_MOBILE_AFTER_TRENDING_TOPICS_AD: 'Homepage - After Top Trending Topics (Mobile)',
+  HOMEPAGE_AFTER_POLITICS_GOSSIP_AD: 'Homepage - Between Politics Gossip and Reviews (Desktop, replaces Vuukle slot)',
   INNER_SIDEBAR_LEFT: 'Article Page - Sidebar Left',
   INNER_SIDEBAR_RIGHT: 'Article Page - Sidebar Right',
   INNER_TOP_BANNER: 'Article Page - Top Banner (Desktop)',
@@ -298,6 +300,7 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   HOMEPAGE_MOBILE_AFTER_OPINION_AD: { width: '380px', height: '250px' },
   HOMEPAGE_MOBILE_BETWEEN_MOVIE_NEWS_GOSSIP_AD: { width: '330px', height: '40px' },
   HOMEPAGE_MOBILE_AFTER_TRENDING_TOPICS_AD: { width: '380px', height: '250px' },
+  HOMEPAGE_AFTER_POLITICS_GOSSIP_AD: { width: '675px', height: '90px' },
   INNER_SIDEBAR_LEFT: { width: '160px', height: 'any' },
   INNER_SIDEBAR_RIGHT: { width: '160px', height: 'any' },
   INNER_TOP_BANNER: { width: '728px', height: '90px' },
@@ -345,6 +348,7 @@ export const AD_ZONE_PAGE: Record<Exclude<AdZone, 'ROADBLOCK'>, AdPage> = {
   HOMEPAGE_MOBILE_AFTER_OPINION_AD: 'home',
   HOMEPAGE_MOBILE_BETWEEN_MOVIE_NEWS_GOSSIP_AD: 'home',
   HOMEPAGE_MOBILE_AFTER_TRENDING_TOPICS_AD: 'home',
+  HOMEPAGE_AFTER_POLITICS_GOSSIP_AD: 'home',
   INNER_SIDEBAR_LEFT: 'inner',
   INNER_SIDEBAR_RIGHT: 'inner',
   INNER_TOP_BANNER: 'inner',
@@ -409,6 +413,7 @@ export const AD_ZONE_DEVICE: Record<Exclude<AdZone, 'ROADBLOCK'>, AdDevice> = {
   HOMEPAGE_MOBILE_AFTER_OPINION_AD: 'mobile',
   HOMEPAGE_MOBILE_BETWEEN_MOVIE_NEWS_GOSSIP_AD: 'mobile',
   HOMEPAGE_MOBILE_AFTER_TRENDING_TOPICS_AD: 'mobile',
+  HOMEPAGE_AFTER_POLITICS_GOSSIP_AD: 'desktop',
   INNER_SIDEBAR_LEFT: 'desktop',
   INNER_SIDEBAR_RIGHT: 'desktop',
   INNER_TOP_BANNER: 'desktop',
