@@ -32,11 +32,13 @@ export const GENERIC_CATEGORY_SLUGS = new Set(['uncategorized', 'articles', 'mov
 // These are homepage-feed/UI markers in the source site, not real topics -
 // "Latest News" (WordPress nicename "lastest-news", a typo baked into the
 // export itself - matching "latest-news" too in case a differently-exported
-// file spells it correctly) and "Talk Of The Town", which in THIS system is
-// the isTalkOfTheTown boolean flag, not a Category row. A post carrying
-// either should never have it picked as its actual assigned category - skip
-// past it to whatever real topic category the post also has.
-export const LATEST_NEWS_SLUGS = new Set(['lastest-news', 'latest-news', 'talk-of-the-town']);
+// file spells it correctly), "Talk Of The Town" (the isTalkOfTheTown boolean
+// flag in THIS system, not a Category row), and "Big Story" (isBigStory,
+// same deal - confirmed live: posts were getting /big-story/ as their
+// permanent URL category instead of their real topic). A post carrying any
+// of these should never have it picked as its actual assigned category -
+// skip past it to whatever real topic category the post also has.
+export const LATEST_NEWS_SLUGS = new Set(['lastest-news', 'latest-news', 'talk-of-the-town', 'big-story']);
 
 // Some categories only exist in a given WordPress export as a near-duplicate
 // of a real, already-curated category (different slug, same topic) -
