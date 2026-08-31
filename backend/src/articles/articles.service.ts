@@ -15,6 +15,42 @@ const articleInclude = {
   author: { select: { id: true, name: true, email: true } },
 };
 
+// Neither list endpoint clamped `take` at all - a caller (or bot) could ask
+// for take=1000000 and get every published article's full body/schemaData in
+// one response (confirmed live: ~12MB, 6-10s). 100 comfortably covers every
+// real caller - the largest legitimate request anywhere in this codebase is
+// the homepage's shared 40-article pull.
+const MAX_TAKE = 100;
+
+function clampTake(take: number | undefined, fallback = 25): number {
+  if (take === undefined || Number.isNaN(take) || take <= 0) return fallback;
+  return Math.min(take, MAX_TAKE);
+}
+
+// listPublished() backs one shared public endpoint hit by ~8 different frontend call sites
+// (homepage's shared feed, box-office, every list-page sidebar, list-page's own main list,
+// Editor's Pick) - a field-usage audit of every one of them found only list-page.php's main
+// list renders a publish date and an excerpt (real excerpts are null for almost every article,
+// so that's usually built by truncating `body` instead - see ga_article_excerpt() in the
+// frontend). Nothing else ever reads `body`, `tags`, or `author` beyond its name, so those stay
+// out unless a caller opts in with includeBody. `schemaData` stays in unconditionally - Editor's
+// Pick needs it and it's small, unlike body.
+function publicListSelect(includeBody: boolean) {
+  return {
+    id: true,
+    shortId: true,
+    title: true,
+    slug: true,
+    excerpt: true,
+    featuredImageUrl: true,
+    publishedAt: true,
+    viewCount: true,
+    schemaData: true,
+    category: { select: { slug: true, parent: { select: { slug: true } } } },
+    ...(includeBody ? { body: true } : {}),
+  };
+}
+
 type ArticleWithCategoryPath = {
   shortId: number;
   title: string;
@@ -106,7 +142,7 @@ export class ArticlesService {
         // publishedAt yet (a fresh, never-published draft).
         orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
         skip: filters.skip ?? 0,
-        take: filters.take ?? 25,
+        take: clampTake(filters.take),
       }),
       this.prisma.article.count({ where }),
     ]);
@@ -257,6 +293,7 @@ export class ArticlesService {
     isTrending?: boolean;
     skip?: number;
     take?: number;
+    includeBody?: boolean;
   }) {
     // includeChildren=true widens categoryId to itself + its direct children
     // (categories are never nested more than one level deep) so a parent
@@ -286,10 +323,10 @@ export class ArticlesService {
     const [items, total] = await Promise.all([
       this.prisma.article.findMany({
         where,
-        include: articleInclude,
+        select: publicListSelect(filters.includeBody ?? false),
         orderBy: { publishedAt: 'desc' },
         skip: filters.skip ?? 0,
-        take: filters.take ?? 25,
+        take: clampTake(filters.take),
       }),
       this.prisma.article.count({ where }),
     ]);
@@ -322,7 +359,7 @@ export class ArticlesService {
   async findBigStoryFeed(take = 4) {
     const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isBigStory: true },
-      include: articleInclude,
+      select: publicListSelect(false),
       orderBy: { publishedAt: 'desc' },
       take,
     });
@@ -335,7 +372,7 @@ export class ArticlesService {
   async findTrendingFeed(take = 19) {
     const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isTrending: true },
-      include: articleInclude,
+      select: publicListSelect(false),
       orderBy: { publishedAt: 'desc' },
       take,
     });
@@ -347,7 +384,7 @@ export class ArticlesService {
   async findTalkOfTheTownFeed(take = 5) {
     const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isTalkOfTheTown: true },
-      include: articleInclude,
+      select: publicListSelect(false),
       orderBy: { publishedAt: 'desc' },
       take,
     });
@@ -359,7 +396,7 @@ export class ArticlesService {
   async findFeaturedFeed(take = 5) {
     const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isFeatured: true },
-      include: articleInclude,
+      select: publicListSelect(false),
       orderBy: { updatedAt: 'desc' },
       take,
     });
@@ -376,7 +413,7 @@ export class ArticlesService {
         status: 'PUBLISHED',
         category: { slug: categorySlug, parent: { slug: parentSlug } },
       },
-      include: articleInclude,
+      select: publicListSelect(false),
       orderBy: { publishedAt: 'desc' },
       take,
     });

@@ -5,6 +5,30 @@ import { CreateAdvertisementDto } from './dto/create-advertisement.dto';
 import { UpdateAdvertisementDto } from './dto/update-advertisement.dto';
 import { AdZone } from '@prisma/client';
 
+// The public zone/roadblock endpoints (ga_render_ad() and friends on the frontend) only ever
+// read this set of fields, whatever the zone or device - confirmed by grepping every ad-related
+// PHP call site (helpers.php's ga_render_ad/ga_maybe_show_roadblock_ad/ga_prepare_interstitial_ad,
+// advertisement.php). Dropping id/zone/showOnDesktop/showOnMobile/isRoadblock/isActive/
+// startDate/endDate/sortOrder/createdBy/createdAt/updatedAt - all of them only ever used
+// server-side to decide WHICH row to return, never read out of the response itself. Rows are
+// tiny either way (no body-sized fields on this model), so this is mostly about not leaking
+// admin/audit fields (createdBy) to an unauthenticated public route, not a size win.
+const publicAdSelect = {
+  name: true,
+  type: true,
+  imageUrlDesktop: true,
+  imageUrlMobile: true,
+  landingUrl: true,
+  scriptCode: true,
+  roadblockDelayMs: true,
+  roadblockCookieTTL: true,
+  interstitialTriggerType: true,
+  interstitialFromPage: true,
+  interstitialToPage: true,
+  interstitialTimerSeconds: true,
+  interstitialFrequencyHours: true,
+};
+
 @Injectable()
 export class AdvertisementsService {
   constructor(
@@ -80,6 +104,7 @@ export class AdvertisementsService {
         OR: [{ endDate: null }, { endDate: { gte: now } }],
         ...(isDesktop ? { showOnDesktop: true } : { showOnMobile: true }),
       },
+      select: publicAdSelect,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
     });
 
@@ -100,6 +125,7 @@ export class AdvertisementsService {
         OR: [{ endDate: null }, { endDate: { gte: now } }],
         ...(isDesktop ? { showOnDesktop: true } : { showOnMobile: true }),
       },
+      select: publicAdSelect,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
     });
 

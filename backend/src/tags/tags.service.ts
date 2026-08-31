@@ -10,8 +10,13 @@ export class TagsService {
     private readonly auditService: AuditService,
   ) {}
 
+  // No caller passes a `take` here - the real tag count (~2251, per the
+  // frontend's own slug-lookup comment) is expected and cached client-side
+  // for an hour. This cap is defense-in-depth against the table growing
+  // unboundedly or a future caller assuming this endpoint is safe to hit
+  // without one, not a limit anything currently relies on hitting.
   list() {
-    return this.prisma.tag.findMany({ orderBy: { name: 'asc' } });
+    return this.prisma.tag.findMany({ orderBy: { name: 'asc' }, take: 5000 });
   }
 
   // Used by the admin tag-picker autocomplete — capped and only queried

@@ -16,6 +16,7 @@ export class PublicArticlesController {
     @Query('isTrending') isTrending?: string,
     @Query('skip') skip?: string,
     @Query('take') take?: string,
+    @Query('includeBody') includeBody?: string,
   ) {
     return this.articlesService.listPublished({
       categoryId,
@@ -24,6 +25,7 @@ export class PublicArticlesController {
       isTrending: isTrending === 'true',
       skip: skip ? Number(skip) : undefined,
       take: take ? Number(take) : undefined,
+      includeBody: includeBody === 'true',
     });
   }
 
