@@ -158,7 +158,11 @@ export class ArticlesService {
   }
 
   async findOne(id: string) {
-    const article = await this.prisma.article.findUnique({ where: { id }, include: articleInclude });
+    const article = await this.prisma.article.findUnique({
+      where: { id },
+      include: articleInclude,
+      relationLoadStrategy: 'join',
+    });
     if (!article) throw new NotFoundException('Article not found');
     return article;
   }
@@ -195,6 +199,7 @@ export class ArticlesService {
           : undefined,
       },
       include: articleInclude,
+      relationLoadStrategy: 'join',
     });
 
     await this.scheduleIfNeeded(article.id, status, dto.scheduledAt);
@@ -248,6 +253,7 @@ export class ArticlesService {
         tags: dto.tagIds ? { create: dto.tagIds.map((tagId) => ({ tagId })) } : undefined,
       },
       include: articleInclude,
+      relationLoadStrategy: 'join',
     });
 
     await this.scheduleIfNeeded(id, dto.status ?? before.status, dto.scheduledAt);
@@ -324,6 +330,7 @@ export class ArticlesService {
       this.prisma.article.findMany({
         where,
         select: publicListSelect(filters.includeBody ?? false),
+        relationLoadStrategy: 'join',
         orderBy: { publishedAt: 'desc' },
         skip: filters.skip ?? 0,
         take: clampTake(filters.take),
@@ -344,7 +351,11 @@ export class ArticlesService {
       ? { id: idOrShortId, status: 'PUBLISHED' as const }
       : { shortId: Number(idOrShortId), status: 'PUBLISHED' as const };
 
-    const article = await this.prisma.article.findFirst({ where, include: articleInclude });
+    const article = await this.prisma.article.findFirst({
+      where,
+      include: articleInclude,
+      relationLoadStrategy: 'join',
+    });
     if (!article) throw new NotFoundException('Article not found');
     return withUrlPath(article);
   }
@@ -360,6 +371,7 @@ export class ArticlesService {
     const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isBigStory: true },
       select: publicListSelect(false),
+      relationLoadStrategy: 'join',
       orderBy: { publishedAt: 'desc' },
       take,
     });
@@ -373,6 +385,7 @@ export class ArticlesService {
     const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isTrending: true },
       select: publicListSelect(false),
+      relationLoadStrategy: 'join',
       orderBy: { publishedAt: 'desc' },
       take,
     });
@@ -385,6 +398,7 @@ export class ArticlesService {
     const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isTalkOfTheTown: true },
       select: publicListSelect(false),
+      relationLoadStrategy: 'join',
       orderBy: { publishedAt: 'desc' },
       take,
     });
@@ -397,6 +411,7 @@ export class ArticlesService {
     const items = await this.prisma.article.findMany({
       where: { status: 'PUBLISHED', isFeatured: true },
       select: publicListSelect(false),
+      relationLoadStrategy: 'join',
       orderBy: { updatedAt: 'desc' },
       take,
     });
@@ -414,6 +429,7 @@ export class ArticlesService {
         category: { slug: categorySlug, parent: { slug: parentSlug } },
       },
       select: publicListSelect(false),
+      relationLoadStrategy: 'join',
       orderBy: { publishedAt: 'desc' },
       take,
     });

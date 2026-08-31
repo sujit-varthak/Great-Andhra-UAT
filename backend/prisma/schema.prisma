@@ -4,7 +4,8 @@
 // normalized PostgreSQL schema, per proposal §4 (Data Migration Plan).
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -172,12 +173,14 @@ model Article {
   @@index([categoryId])
   @@index([createdAt])
   // Every homepage flag feed (findBigStoryFeed/findTrendingFeed/findTalkOfTheTownFeed/
-  // findFeaturedFeed in articles.service.ts) filters on exactly {status, <flag>} and orders
-  // by updatedAt desc — these mirror that shape instead of relying on the bare [status]
-  // index above plus a full scan of the (mostly-false) flag column.
-  @@index([status, isBigStory, updatedAt])
-  @@index([status, isTrending, updatedAt])
-  @@index([status, isTalkOfTheTown, updatedAt])
+  // findFeaturedFeed in articles.service.ts) filters on exactly {status, <flag>} - three of
+  // the four (Big Story/Trending/Talk of the Town) order by publishedAt desc, only Featured
+  // orders by updatedAt desc, so each index's trailing column matches its own query's
+  // ORDER BY instead of assuming they're all the same shape (they weren't - confirmed via a
+  // 2026-08-31 audit that these three couldn't satisfy their own ORDER BY via an index scan).
+  @@index([status, isBigStory, publishedAt])
+  @@index([status, isTrending, publishedAt])
+  @@index([status, isTalkOfTheTown, publishedAt])
   @@index([status, isFeatured, updatedAt])
   // listPublished()/findByCategoryPath() filter on {status, categoryId?} and order by
   // publishedAt desc; categoryId is optional there (site-wide public listing has none).

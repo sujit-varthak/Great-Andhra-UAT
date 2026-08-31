@@ -79,6 +79,7 @@ export class AdvertisementsService {
         take,
         orderBy: [{ zone: 'asc' }, { sortOrder: 'asc' }, { createdAt: 'desc' }],
         include: { createdByUser: { select: { id: true, email: true, name: true } } },
+        relationLoadStrategy: 'join',
       }),
       this.prisma.advertisement.count({ where }),
     ]);
@@ -90,6 +91,7 @@ export class AdvertisementsService {
     return this.prisma.advertisement.findUnique({
       where: { id },
       include: { createdByUser: { select: { id: true, email: true, name: true } } },
+      relationLoadStrategy: 'join',
     });
   }
 
