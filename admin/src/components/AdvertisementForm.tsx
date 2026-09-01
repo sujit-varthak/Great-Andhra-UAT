@@ -488,7 +488,7 @@ export function AdvertisementForm({ advertisement }: Props) {
                     </option>
                   ))}
                 </select>
-                <small>Only fires when leaving this page ("Any Page" matches every referrer)</small>
+                <small>Only fires when leaving this page (&quot;Any Page&quot; matches every referrer)</small>
               </div>
 
               <div className="field">
@@ -504,7 +504,7 @@ export function AdvertisementForm({ advertisement }: Props) {
                     </option>
                   ))}
                 </select>
-                <small>Only fires when landing on this page ("Any Page" matches every destination)</small>
+                <small>Only fires when landing on this page (&quot;Any Page&quot; matches every destination)</small>
               </div>
             </div>
           ) : (
