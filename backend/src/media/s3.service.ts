@@ -27,6 +27,9 @@ export class S3Service {
         Key: key,
         Body: body,
         ContentType: contentType,
+        // Every key is `uploads/{date}/{randomUUID()}.{ext}` (see media.service.ts) - never
+        // reused or overwritten - so it's safe to tell browsers/CDN to cache it forever.
+        CacheControl: 'public, max-age=31536000, immutable',
       }),
     );
 
