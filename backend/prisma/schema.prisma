@@ -381,6 +381,7 @@ enum AdZone {
   LISTPAGE_TOP_BANNER
   LISTPAGE_MOBILE_BANNER
   LISTPAGE_MOBILE_MIDDLE_AD
+  LISTPAGE_REVIEW_AD
 
   // Roadblock (full-page interstitial, triggered on cookie-expiry navigation - see
   // ga_maybe_show_roadblock_ad())

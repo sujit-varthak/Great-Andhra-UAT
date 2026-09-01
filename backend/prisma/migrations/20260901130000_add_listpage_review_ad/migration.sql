@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "AdZone" ADD VALUE 'LISTPAGE_REVIEW_AD';
