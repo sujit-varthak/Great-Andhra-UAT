@@ -3,7 +3,6 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, ApiError } from '@/lib/api';
-import { useAuth } from '@/lib/auth-context';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,32 +10,25 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { refresh } = useAuth();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      // 2FA temporarily disabled for demo purposes — restore this block to
-      // send the user through /2fa-setup or /login-2fa again.
-      // const res = await apiFetch<{
-      //   requiresTwoFactor?: boolean;
-      //   requiresTwoFactorSetup?: boolean;
-      //   preAuthToken: string;
-      // }>('/auth/login', { method: 'POST', body: { email, password } });
-      //
-      // sessionStorage.setItem('preAuthToken', res.preAuthToken);
-      //
-      // if (res.requiresTwoFactorSetup) {
-      //   router.push('/2fa-setup');
-      // } else {
-      //   router.push('/login-2fa');
-      // }
+      const res = await apiFetch<{
+        requiresTwoFactor?: boolean;
+        requiresTwoFactorSetup?: boolean;
+        preAuthToken: string;
+      }>('/auth/login', { method: 'POST', body: { email, password } });
 
-      await apiFetch('/auth/login', { method: 'POST', body: { email, password } });
-      await refresh();
-      router.push('/');
+      sessionStorage.setItem('preAuthToken', res.preAuthToken);
+
+      if (res.requiresTwoFactorSetup) {
+        router.push('/2fa-setup');
+      } else {
+        router.push('/login-2fa');
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Login failed');
     } finally {

@@ -111,14 +111,8 @@ export class AuthService {
       after: { status: 'ACTIVE', event: 'invite_accepted' },
     });
 
-    // 2FA temporarily disabled for demo purposes — restore this block (and
-    // remove the issueSession call below) to make 2FA enrollment mandatory
-    // before first login again.
-    // const preAuthToken = this.signPreAuthToken({ sub: user.id, purpose: '2fa-setup' });
-    // return { preAuthToken };
-
-    const tokens = await this.issueSession(user.id);
-    return { ...tokens, userId: user.id };
+    const preAuthToken = this.signPreAuthToken({ sub: user.id, purpose: '2fa-setup' });
+    return { preAuthToken };
   }
 
   async beginTotpSetup(userId: string) {
@@ -190,18 +184,13 @@ export class AuthService {
       throw new ForbiddenException('Account is not active');
     }
 
-    // 2FA temporarily disabled for demo purposes — restore this block (and
-    // remove the issueSession call below) to require TOTP again at login.
-    // if (!user.totpEnabled) {
-    //   // Safety net: an active account must have completed 2FA enrollment.
-    //   const preAuthToken = this.signPreAuthToken({ sub: user.id, purpose: '2fa-setup' });
-    //   return { requiresTwoFactorSetup: true, preAuthToken };
-    // }
-    // const preAuthToken = this.signPreAuthToken({ sub: user.id, purpose: '2fa-login' });
-    // return { requiresTwoFactor: true, preAuthToken };
-
-    const tokens = await this.issueSession(user.id);
-    return { ...tokens, userId: user.id };
+    if (!user.totpEnabled) {
+      // Safety net: an active account must have completed 2FA enrollment.
+      const preAuthToken = this.signPreAuthToken({ sub: user.id, purpose: '2fa-setup' });
+      return { requiresTwoFactorSetup: true, preAuthToken };
+    }
+    const preAuthToken = this.signPreAuthToken({ sub: user.id, purpose: '2fa-login' });
+    return { requiresTwoFactor: true, preAuthToken };
   }
 
   async completeTwoFactorLogin(userId: string, code: string) {
