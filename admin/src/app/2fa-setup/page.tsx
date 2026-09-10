@@ -3,6 +3,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 
 export default function TwoFactorSetupPage() {
   const [preAuthToken, setPreAuthToken] = useState('');
@@ -12,6 +13,7 @@ export default function TwoFactorSetupPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { refresh } = useAuth();
 
   useEffect(() => {
     const token = sessionStorage.getItem('preAuthToken');
@@ -43,6 +45,7 @@ export default function TwoFactorSetupPage() {
         headers: { Authorization: `Bearer ${preAuthToken}` },
       });
       sessionStorage.removeItem('preAuthToken');
+      await refresh();
       router.push('/');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Invalid code');

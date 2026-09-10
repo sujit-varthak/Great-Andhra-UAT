@@ -3,6 +3,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 
 export default function LoginTwoFactorPage() {
   const [code, setCode] = useState('');
@@ -10,6 +11,7 @@ export default function LoginTwoFactorPage() {
   const [loading, setLoading] = useState(false);
   const [preAuthToken, setPreAuthToken] = useState('');
   const router = useRouter();
+  const { refresh } = useAuth();
 
   useEffect(() => {
     const token = sessionStorage.getItem('preAuthToken');
@@ -31,6 +33,7 @@ export default function LoginTwoFactorPage() {
         headers: { Authorization: `Bearer ${preAuthToken}` },
       });
       sessionStorage.removeItem('preAuthToken');
+      await refresh();
       router.push('/');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Verification failed');
