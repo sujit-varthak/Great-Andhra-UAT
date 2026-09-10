@@ -237,6 +237,7 @@ export type AdZone =
   | 'LISTPAGE_TOP_BANNER'
   | 'LISTPAGE_MOBILE_BANNER'
   | 'LISTPAGE_MOBILE_MIDDLE_AD'
+  | 'LISTPAGE_REVIEW_AD'
   | 'ROADBLOCK'
   | 'FULLSCREEN_INTERSTITIAL_AD'
   | 'BOTTOM_STICKY_AD';
@@ -300,6 +301,7 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   LISTPAGE_TOP_BANNER: 'List Page - Top Banner (Desktop)',
   LISTPAGE_MOBILE_BANNER: 'List Page - Top Banner (Mobile)',
   LISTPAGE_MOBILE_MIDDLE_AD: 'List Page - Middle of List (Mobile)',
+  LISTPAGE_REVIEW_AD: 'List Page - Review Ad (Sidebar)',
   ROADBLOCK: 'Roadblock (Full-page Interstitial)',
   FULLSCREEN_INTERSTITIAL_AD: 'Full-Screen Interstitial (sitewide overlay)',
   BOTTOM_STICKY_AD: 'Bottom Sticky / Floating Ad (sitewide)',
@@ -354,6 +356,7 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   LISTPAGE_TOP_BANNER: { width: '728px', height: '90px' },
   LISTPAGE_MOBILE_BANNER: { width: '380px', height: '90px' },
   LISTPAGE_MOBILE_MIDDLE_AD: { width: '300px', height: '250px' },
+  LISTPAGE_REVIEW_AD: { width: '300px', height: '600px' },
   ROADBLOCK: { width: 'flexible', height: 'flexible' },
   FULLSCREEN_INTERSTITIAL_AD: { width: 'up to 500px', height: 'up to 80vh' },
   BOTTOM_STICKY_AD: { width: '336px (desktop) / full-width bar (mobile)', height: '280px (desktop) / ~90px (mobile)' },
@@ -410,6 +413,7 @@ export const AD_ZONE_PAGE: Record<Exclude<AdZone, 'ROADBLOCK' | 'FULLSCREEN_INTE
   LISTPAGE_TOP_BANNER: 'listpage',
   LISTPAGE_MOBILE_BANNER: 'listpage',
   LISTPAGE_MOBILE_MIDDLE_AD: 'listpage',
+  LISTPAGE_REVIEW_AD: 'listpage',
 };
 
 export const AD_PAGE_LABELS: Record<AdPage, string> = {
@@ -480,6 +484,7 @@ export const AD_ZONE_DEVICE: Record<Exclude<AdZone, 'ROADBLOCK' | 'FULLSCREEN_IN
   LISTPAGE_TOP_BANNER: 'desktop',
   LISTPAGE_MOBILE_BANNER: 'mobile',
   LISTPAGE_MOBILE_MIDDLE_AD: 'mobile',
+  LISTPAGE_REVIEW_AD: 'desktop',
 };
 
 export interface Advertisement {
