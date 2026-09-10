@@ -19,24 +19,28 @@ import { PreAuthGuard } from './guards/pre-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AccessTokenPayload, PreAuthTokenPayload } from './interfaces/jwt-payload.interface';
 
-const isProd = process.env.NODE_ENV === 'production';
-
-// Frontend (Vercel) and backend (Render) are on different domains in
-// production, so cross-site fetches need SameSite=None (requires Secure) to
-// carry the cookie at all. Locally both run on localhost, which is same-site,
-// so Lax (and a non-Secure cookie over http) still works there.
+// Admin and backend are always on different origins (different *.ondigitalocean.app
+// subdomains in production; different localhost ports in local dev), so cookies always
+// need SameSite=None to be attached to a cross-origin fetch() at all - this can't be
+// conditioned on NODE_ENV the way it used to be back when local dev ran both on the same
+// localhost origin. SameSite=None requires Secure, which is fine in both places: production
+// is HTTPS throughout, and browsers treat http://localhost as a secure context too. Was
+// previously gated behind `isProd` (a leftover from the old Vercel/Render setup where local
+// dev really was same-site) - if NODE_ENV was ever unset/misconfigured on the deployed
+// backend, that silently downgraded to SameSite=Lax, which browsers never attach to a
+// cross-origin request, breaking login/2FA/refresh with no visible error beyond 401s.
 function setSessionCookies(res: Response, tokens: SessionTokens) {
   res.cookie('access_token', tokens.accessToken, {
     httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? 'none' : 'lax',
+    secure: true,
+    sameSite: 'none',
     maxAge: tokens.accessTokenTtlMs,
     path: '/',
   });
   res.cookie('refresh_token', tokens.refreshToken, {
     httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? 'none' : 'lax',
+    secure: true,
+    sameSite: 'none',
     maxAge: tokens.refreshTokenTtlMs,
     path: '/api/auth',
   });
