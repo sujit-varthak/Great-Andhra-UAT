@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import slugify from 'slugify';
@@ -77,6 +77,8 @@ function withUrlPath<T extends ArticleWithCategoryPath>(article: T): T & { urlPa
 
 @Injectable()
 export class ArticlesService {
+  private readonly logger = new Logger(ArticlesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
@@ -95,18 +97,28 @@ export class ArticlesService {
     }
   }
 
+  // Runs after the article's own Prisma write has already committed, so a Redis/BullMQ
+  // hiccup here must never surface as a failed request - the article itself was saved
+  // successfully; only the queue side effect is best-effort. Caught and logged instead of
+  // thrown, matching how RedisCacheService treats its own connection errors as non-fatal.
   private async scheduleIfNeeded(articleId: string, status?: ArticleStatus, scheduledAt?: string) {
-    if (status === 'SCHEDULED' && scheduledAt) {
-      const delay = Math.max(0, new Date(scheduledAt).getTime() - Date.now());
-      await this.publishQueue.add(
-        'publish-article',
-        { articleId },
-        { delay, jobId: `publish-${articleId}` },
+    try {
+      if (status === 'SCHEDULED' && scheduledAt) {
+        const delay = Math.max(0, new Date(scheduledAt).getTime() - Date.now());
+        await this.publishQueue.add(
+          'publish-article',
+          { articleId },
+          { delay, jobId: `publish-${articleId}` },
+        );
+      } else {
+        // Remove any stale scheduled job if the article is no longer pending schedule.
+        const job = await this.publishQueue.getJob(`publish-${articleId}`);
+        if (job) await job.remove();
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Failed to update scheduled-publish queue for article ${articleId}: ${(err as Error).message}`,
       );
-    } else {
-      // Remove any stale scheduled job if the article is no longer pending schedule.
-      const job = await this.publishQueue.getJob(`publish-${articleId}`);
-      if (job) await job.remove();
     }
   }
 
@@ -252,7 +264,16 @@ export class ArticlesService {
       relationLoadStrategy: 'join',
     });
 
-    await this.scheduleIfNeeded(id, dto.status ?? before.status, dto.scheduledAt);
+    // Falls back to the article's existing scheduledAt the same way status falls back to
+    // before.status just above - otherwise a partial edit that doesn't touch scheduling
+    // (e.g. a title fix) would pass scheduledAt=undefined here while status stays SCHEDULED,
+    // which silently cancels the BullMQ publish job even though the DB row (and the admin UI)
+    // still show the article as scheduled for its original date.
+    await this.scheduleIfNeeded(
+      id,
+      dto.status ?? before.status,
+      dto.scheduledAt ?? before.scheduledAt?.toISOString(),
+    );
 
     await this.auditService.record({
       actorId,
