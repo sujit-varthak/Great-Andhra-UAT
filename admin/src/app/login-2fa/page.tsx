@@ -4,6 +4,7 @@ import { useEffect, useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { CurrentUser } from '@/lib/types';
 
 export default function LoginTwoFactorPage() {
   const [code, setCode] = useState('');
@@ -11,7 +12,7 @@ export default function LoginTwoFactorPage() {
   const [loading, setLoading] = useState(false);
   const [preAuthToken, setPreAuthToken] = useState('');
   const router = useRouter();
-  const { refresh } = useAuth();
+  const { setUser } = useAuth();
 
   useEffect(() => {
     const token = sessionStorage.getItem('preAuthToken');
@@ -27,13 +28,16 @@ export default function LoginTwoFactorPage() {
     setError('');
     setLoading(true);
     try {
-      await apiFetch('/auth/login/2fa', {
+      const user = await apiFetch<CurrentUser>('/auth/login/2fa', {
         method: 'POST',
         body: { code },
         headers: { Authorization: `Bearer ${preAuthToken}` },
       });
       sessionStorage.removeItem('preAuthToken');
-      await refresh();
+      // The endpoint above already returns the freshly-authenticated user (same session
+      // cookies it just set) - use it directly instead of firing a separate /auth/me call
+      // that could itself fail transiently and send us right back to /login.
+      setUser(user);
       router.push('/');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Verification failed');
