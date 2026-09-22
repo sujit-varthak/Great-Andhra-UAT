@@ -53,21 +53,28 @@ function publicListSelect(includeBody: boolean) {
 
 type ArticleWithCategoryPath = {
   shortId: number;
-  title: string;
+  slug: string;
   category: { slug: string; parent: { slug: string } | null } | null;
 };
 
-// Public article URL: /{shortId}/{category}/{subCategory?}/{title-slug}. The
+// Public article URL: /{shortId}/{category}/{subCategory?}/{article-slug}. The
 // subcategory segment only appears when the category itself has a parent
 // (e.g. movies > reviews); a top-level-only category or no category at all
 // just drops straight to the next segment.
+//
+// Uses the article's persisted, unique `slug` column rather than recomputing
+// slugify(title) here - the two can diverge (title edited after publish,
+// slugify version differences) and only the persisted slug is guaranteed
+// collision-free via uniqueSlug(). Harmless today since the leading shortId
+// masks any mismatch, but load-bearing once the ID segment is dropped from
+// the URL (see findPublishedById's slug lookup branch below).
 function buildUrlPath(article: ArticleWithCategoryPath): string {
   const segments = [String(article.shortId)];
   if (article.category) {
     if (article.category.parent) segments.push(article.category.parent.slug);
     segments.push(article.category.slug);
   }
-  segments.push(slugify(article.title, { lower: true, strict: true }));
+  segments.push(article.slug);
   return segments.join('/');
 }
 
@@ -360,13 +367,20 @@ export class ArticlesService {
   private static readonly UUID_RE =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  // Accepts either the article's UUID or its short numeric id - the urlPath
-  // field is built from shortId specifically so it can be a clean, shareable
-  // URL instead of exposing the UUID; this is what makes that link resolve.
-  async findPublishedById(idOrShortId: string) {
-    const where = ArticlesService.UUID_RE.test(idOrShortId)
-      ? { id: idOrShortId, status: 'PUBLISHED' as const }
-      : { shortId: Number(idOrShortId), status: 'PUBLISHED' as const };
+  private static readonly NUMERIC_RE = /^\d+$/;
+
+  // Accepts the article's UUID, its short numeric id, or its slug - checked in
+  // that order so every URL shape that has ever been handed out still resolves
+  // (old admin/API links by UUID, current public URLs by shortId, and the
+  // slug-only public URLs the frontend is moving to). The slug branch is what
+  // lets this resolve once the leading shortId segment is dropped from public
+  // article URLs.
+  async findPublishedById(idOrShortIdOrSlug: string) {
+    const where = ArticlesService.UUID_RE.test(idOrShortIdOrSlug)
+      ? { id: idOrShortIdOrSlug, status: 'PUBLISHED' as const }
+      : ArticlesService.NUMERIC_RE.test(idOrShortIdOrSlug)
+        ? { shortId: Number(idOrShortIdOrSlug), status: 'PUBLISHED' as const }
+        : { slug: idOrShortIdOrSlug, status: 'PUBLISHED' as const };
 
     const article = await this.prisma.article.findFirst({
       where,
