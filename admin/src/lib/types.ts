@@ -227,6 +227,7 @@ export type AdZone =
   | 'INNER_ARTICLE_BANNER'
   | 'INNER_ARTICLE_MIDCONTENT_AD'
   | 'INNER_SIDEBAR_BOTTOM_AD'
+  | 'INNER_ARTICLE_END_AD'
   | 'BOXOFFICE_SIDEBAR_LEFT'
   | 'BOXOFFICE_SIDEBAR_RIGHT'
   | 'BOXOFFICE_TOP_BANNER'
@@ -293,6 +294,7 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   INNER_ARTICLE_BANNER: 'Article Page - In-Article Banner (below byline)',
   INNER_ARTICLE_MIDCONTENT_AD: 'Article Page - Mid-Content Ad (within article body)',
   INNER_SIDEBAR_BOTTOM_AD: 'Article Page - Sidebar Bottom Ad',
+  INNER_ARTICLE_END_AD: 'Article Page - After Article (Script-Only, replaces old Vuukle ad slot)',
   BOXOFFICE_SIDEBAR_LEFT: 'Box Office - Sidebar Left',
   BOXOFFICE_SIDEBAR_RIGHT: 'Box Office - Sidebar Right',
   BOXOFFICE_TOP_BANNER: 'Box Office - Top Banner (Desktop)',
@@ -350,6 +352,7 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   INNER_ARTICLE_BANNER: { width: '650px', height: '60px' },
   INNER_ARTICLE_MIDCONTENT_AD: { width: 'full width', height: 'auto' },
   INNER_SIDEBAR_BOTTOM_AD: { width: '300px', height: '250px' },
+  INNER_ARTICLE_END_AD: { width: '320px', height: 'auto (script-controlled)' },
   BOXOFFICE_SIDEBAR_LEFT: { width: '160px', height: 'any' },
   BOXOFFICE_SIDEBAR_RIGHT: { width: '160px', height: 'any' },
   BOXOFFICE_TOP_BANNER: { width: '728px', height: '90px' },
@@ -409,6 +412,7 @@ export const AD_ZONE_PAGE: Record<Exclude<AdZone, 'ROADBLOCK' | 'FULLSCREEN_INTE
   INNER_ARTICLE_BANNER: 'inner',
   INNER_ARTICLE_MIDCONTENT_AD: 'inner',
   INNER_SIDEBAR_BOTTOM_AD: 'inner',
+  INNER_ARTICLE_END_AD: 'inner',
   BOXOFFICE_SIDEBAR_LEFT: 'boxoffice',
   BOXOFFICE_SIDEBAR_RIGHT: 'boxoffice',
   BOXOFFICE_TOP_BANNER: 'boxoffice',
@@ -482,6 +486,7 @@ export const AD_ZONE_DEVICE: Record<Exclude<AdZone, 'ROADBLOCK' | 'FULLSCREEN_IN
   INNER_ARTICLE_BANNER: 'both',
   INNER_ARTICLE_MIDCONTENT_AD: 'both',
   INNER_SIDEBAR_BOTTOM_AD: 'both',
+  INNER_ARTICLE_END_AD: 'both',
   BOXOFFICE_SIDEBAR_LEFT: 'desktop',
   BOXOFFICE_SIDEBAR_RIGHT: 'desktop',
   BOXOFFICE_TOP_BANNER: 'desktop',

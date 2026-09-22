@@ -367,6 +367,12 @@ enum AdZone {
   INNER_ARTICLE_BANNER
   INNER_ARTICLE_MIDCONTENT_AD
   INNER_SIDEBAR_BOTTOM_AD
+  // Script-only slot after the article body, before Related Articles - replaces the
+  // static #vuukle-ad-13 div, which was hardcoded to whatever Vuukle's own platform.js
+  // auto-injects. This zone lets an admin swap that script (or any other ad network's)
+  // without a deploy - sizing is entirely up to whatever gets pasted in, same as
+  // BOXOFFICE_STICKY_AD's SCRIPT-type handling.
+  INNER_ARTICLE_END_AD
 
   // Box Office
   BOXOFFICE_SIDEBAR_LEFT
