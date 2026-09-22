@@ -321,6 +321,7 @@ export class ArticlesService {
     includeChildren?: boolean;
     tagId?: string;
     isTrending?: boolean;
+    search?: string;
     skip?: number;
     take?: number;
     includeBody?: boolean;
@@ -349,6 +350,7 @@ export class ArticlesService {
       // pagination like any other listing, not the homepage's small
       // fixed-size trending widget sliced client-side.
       ...(filters.isTrending ? { isTrending: true } : {}),
+      ...(filters.search ? { title: { contains: filters.search, mode: 'insensitive' as const } } : {}),
     };
     const [items, total] = await Promise.all([
       this.prisma.article.findMany({
