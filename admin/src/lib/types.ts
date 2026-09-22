@@ -211,8 +211,10 @@ export type AdZone =
   | 'HOMEPAGE_MOBILE_LATEST_NEWS_END_AD'
   | 'HOMEPAGE_MOBILE_AFTER_TALK_OF_TOWN_AD'
   | 'HOMEPAGE_MOBILE_AFTER_OPINION_AD'
+  | 'HOMEPAGE_MOBILE_BEFORE_MOVIE_NEWS_AD'
   | 'HOMEPAGE_MOBILE_BETWEEN_MOVIE_NEWS_GOSSIP_AD'
   | 'HOMEPAGE_MOBILE_AFTER_MOVIE_GOSSIP_AD'
+  | 'HOMEPAGE_MOBILE_BETWEEN_ANDHRA_TELANGANA_NEWS_AD'
   | 'HOMEPAGE_MOBILE_AFTER_TELANGANA_NEWS_AD'
   | 'HOMEPAGE_MOBILE_AFTER_USA_SCHEDULE_AD'
   | 'HOMEPAGE_MOBILE_AFTER_MOST_POPULAR_AD'
@@ -275,8 +277,10 @@ export const AD_ZONE_LABELS: Record<AdZone, string> = {
   HOMEPAGE_MOBILE_LATEST_NEWS_END_AD: 'Homepage - End of Latest News List (Mobile)',
   HOMEPAGE_MOBILE_AFTER_TALK_OF_TOWN_AD: 'Homepage - After Talk of the Town (Mobile)',
   HOMEPAGE_MOBILE_AFTER_OPINION_AD: 'Homepage - After Opinion Section (Mobile)',
+  HOMEPAGE_MOBILE_BEFORE_MOVIE_NEWS_AD: 'Homepage - After Editor\'s Pick, Before Movie News (Mobile)',
   HOMEPAGE_MOBILE_BETWEEN_MOVIE_NEWS_GOSSIP_AD: 'Homepage - Between Movie News and Movie Gossip (Mobile)',
   HOMEPAGE_MOBILE_AFTER_MOVIE_GOSSIP_AD: 'Homepage - Between Movie Gossip and Andhra News (Mobile)',
+  HOMEPAGE_MOBILE_BETWEEN_ANDHRA_TELANGANA_NEWS_AD: 'Homepage - Between Andhra News and Telangana News (Mobile)',
   HOMEPAGE_MOBILE_AFTER_TELANGANA_NEWS_AD: 'Homepage - Between Telangana News and Gossip (Mobile)',
   HOMEPAGE_MOBILE_AFTER_USA_SCHEDULE_AD: 'Homepage - Between USA Movie Schedules and Featured (Mobile, Right Column)',
   HOMEPAGE_MOBILE_AFTER_MOST_POPULAR_AD: 'Homepage - End of Most Popular Section (Mobile, Right Column)',
@@ -328,10 +332,12 @@ export const AD_ZONE_DIMENSIONS: Record<AdZone, { width: string; height: string 
   HOMEPAGE_MOBILE_LATEST_NEWS_END_AD: { width: '300px', height: '250px' },
   HOMEPAGE_MOBILE_AFTER_TALK_OF_TOWN_AD: { width: '380px', height: '250px' },
   HOMEPAGE_MOBILE_AFTER_OPINION_AD: { width: '380px', height: '250px' },
+  HOMEPAGE_MOBILE_BEFORE_MOVIE_NEWS_AD: { width: '300px', height: '250px' },
   // Widened from 330x40 to 300x250 - the .ad-center-mobile-block wrapper has no
   // size cap (unlike .sortable-item_clear123), so a bigger creative fits fine.
   HOMEPAGE_MOBILE_BETWEEN_MOVIE_NEWS_GOSSIP_AD: { width: '300px', height: '250px' },
   HOMEPAGE_MOBILE_AFTER_MOVIE_GOSSIP_AD: { width: '330px', height: '40px' },
+  HOMEPAGE_MOBILE_BETWEEN_ANDHRA_TELANGANA_NEWS_AD: { width: '300px', height: '250px' },
   HOMEPAGE_MOBILE_AFTER_TELANGANA_NEWS_AD: { width: '300px', height: '250px' },
   HOMEPAGE_MOBILE_AFTER_USA_SCHEDULE_AD: { width: '320px', height: '40px' },
   HOMEPAGE_MOBILE_AFTER_MOST_POPULAR_AD: { width: '300px', height: '250px' },
@@ -387,8 +393,10 @@ export const AD_ZONE_PAGE: Record<Exclude<AdZone, 'ROADBLOCK' | 'FULLSCREEN_INTE
   HOMEPAGE_MOBILE_LATEST_NEWS_END_AD: 'home',
   HOMEPAGE_MOBILE_AFTER_TALK_OF_TOWN_AD: 'home',
   HOMEPAGE_MOBILE_AFTER_OPINION_AD: 'home',
+  HOMEPAGE_MOBILE_BEFORE_MOVIE_NEWS_AD: 'home',
   HOMEPAGE_MOBILE_BETWEEN_MOVIE_NEWS_GOSSIP_AD: 'home',
   HOMEPAGE_MOBILE_AFTER_MOVIE_GOSSIP_AD: 'home',
+  HOMEPAGE_MOBILE_BETWEEN_ANDHRA_TELANGANA_NEWS_AD: 'home',
   HOMEPAGE_MOBILE_AFTER_TELANGANA_NEWS_AD: 'home',
   HOMEPAGE_MOBILE_AFTER_USA_SCHEDULE_AD: 'home',
   HOMEPAGE_MOBILE_AFTER_MOST_POPULAR_AD: 'home',
@@ -458,8 +466,10 @@ export const AD_ZONE_DEVICE: Record<Exclude<AdZone, 'ROADBLOCK' | 'FULLSCREEN_IN
   HOMEPAGE_MOBILE_LATEST_NEWS_END_AD: 'mobile',
   HOMEPAGE_MOBILE_AFTER_TALK_OF_TOWN_AD: 'mobile',
   HOMEPAGE_MOBILE_AFTER_OPINION_AD: 'mobile',
+  HOMEPAGE_MOBILE_BEFORE_MOVIE_NEWS_AD: 'mobile',
   HOMEPAGE_MOBILE_BETWEEN_MOVIE_NEWS_GOSSIP_AD: 'mobile',
   HOMEPAGE_MOBILE_AFTER_MOVIE_GOSSIP_AD: 'mobile',
+  HOMEPAGE_MOBILE_BETWEEN_ANDHRA_TELANGANA_NEWS_AD: 'mobile',
   HOMEPAGE_MOBILE_AFTER_TELANGANA_NEWS_AD: 'mobile',
   HOMEPAGE_MOBILE_AFTER_USA_SCHEDULE_AD: 'mobile',
   HOMEPAGE_MOBILE_AFTER_MOST_POPULAR_AD: 'mobile',
