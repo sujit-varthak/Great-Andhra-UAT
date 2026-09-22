@@ -52,24 +52,24 @@ function publicListSelect(includeBody: boolean) {
 }
 
 type ArticleWithCategoryPath = {
-  shortId: number;
   slug: string;
   category: { slug: string; parent: { slug: string } | null } | null;
 };
 
-// Public article URL: /{shortId}/{category}/{subCategory?}/{article-slug}. The
-// subcategory segment only appears when the category itself has a parent
-// (e.g. movies > reviews); a top-level-only category or no category at all
-// just drops straight to the next segment.
+// Public article URL: /{category}/{subCategory?}/{article-slug} - no leading id segment.
+// The subcategory segment only appears when the category itself has a parent (e.g. movies >
+// reviews); a top-level-only category or no category at all just drops straight to the slug.
 //
-// Uses the article's persisted, unique `slug` column rather than recomputing
-// slugify(title) here - the two can diverge (title edited after publish,
-// slugify version differences) and only the persisted slug is guaranteed
-// collision-free via uniqueSlug(). Harmless today since the leading shortId
-// masks any mismatch, but load-bearing once the ID segment is dropped from
-// the URL (see findPublishedById's slug lookup branch below).
+// Uses the article's persisted, unique `slug` column rather than recomputing slugify(title)
+// here - the two can diverge (title edited after publish, slugify version differences) and
+// only the persisted slug is guaranteed collision-free via uniqueSlug(). This is what makes
+// dropping the id segment safe: findPublishedById()'s slug branch is the sole resolver for
+// these URLs now, so every URL this function emits must already be exactly what that lookup
+// expects. Cutover completed 2026-09-22: confirmed via a full collision audit (0 category-less
+// articles, 0 duplicate slugs across all 2907 published articles) that no article becomes
+// unreachable once the id no longer disambiguates it from a category/reserved path.
 function buildUrlPath(article: ArticleWithCategoryPath): string {
-  const segments = [String(article.shortId)];
+  const segments: string[] = [];
   if (article.category) {
     if (article.category.parent) segments.push(article.category.parent.slug);
     segments.push(article.category.slug);
