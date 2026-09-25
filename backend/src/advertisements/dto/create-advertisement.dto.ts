@@ -8,21 +8,23 @@ export class CreateAdvertisementDto {
   @IsEnum(AdType)
   type: AdType;
 
+  // `null` explicitly clears the field on update (see AdvertisementForm's payload comment) -
+  // @IsOptional() skips the @IsUrl() check for both undefined and null.
   @IsOptional()
   @IsUrl()
-  imageUrlDesktop?: string;
+  imageUrlDesktop?: string | null;
 
   @IsOptional()
   @IsUrl()
-  imageUrlMobile?: string;
+  imageUrlMobile?: string | null;
 
   @IsOptional()
   @IsUrl()
-  landingUrl?: string;
+  landingUrl?: string | null;
 
   @IsOptional()
   @IsString()
-  scriptCode?: string;
+  scriptCode?: string | null;
 
   @IsEnum(AdZone)
   zone: AdZone;

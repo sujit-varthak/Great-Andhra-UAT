@@ -5,7 +5,7 @@ import { apiFetch, ApiError } from '@/lib/api';
 
 interface Props {
   value: string | null;
-  onChange: (url: string) => void;
+  onChange: (url: string | null) => void;
   label?: string;
 }
 
@@ -37,12 +37,24 @@ export function ImageUploader({ value, onChange, label = 'Image' }: Props) {
     <div className="field">
       <label>{label}</label>
       {value && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={value}
-          alt=""
-          style={{ maxWidth: 200, borderRadius: 6, display: 'block', marginBottom: 8 }}
-        />
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={value}
+            alt=""
+            style={{ maxWidth: 200, borderRadius: 6, display: 'block', marginBottom: 8 }}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              onChange(null);
+              if (inputRef.current) inputRef.current.value = '';
+            }}
+            style={{ marginBottom: 8 }}
+          >
+            Remove image
+          </button>
+        </>
       )}
       <input
         ref={inputRef}

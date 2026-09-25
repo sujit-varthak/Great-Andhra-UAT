@@ -241,13 +241,19 @@ export function AdvertisementForm({ advertisement }: Props) {
     const payload = {
       name,
       type,
-      imageUrlDesktop: (isDualDeviceZone ? roadblockImageDesktop : imageUrl) || undefined,
+      // Only send image/link fields for IMAGE ads and only scriptCode for SCRIPT ads. These use
+      // `null` (not `undefined`) whenever the value doesn't apply or was removed - Prisma's
+      // update() treats an `undefined` field as "leave whatever is already in the DB alone", so
+      // omitting the key here would NOT actually clear a previously-saved image/script on edit,
+      // it would just silently leave the stale value in the row. `null` is the only way to
+      // really clear a field.
+      imageUrlDesktop: type === 'IMAGE' ? (isDualDeviceZone ? roadblockImageDesktop : imageUrl) || null : null,
       // Mobile falls back to the desktop image on the frontend when unset, so this is only
       // sent for zones shown on both devices at once - every other zone stays desktop-image-only,
       // matching its single-device nature.
-      imageUrlMobile: isDualDeviceZone ? roadblockImageMobile || undefined : undefined,
-      landingUrl: landingUrl || undefined,
-      scriptCode: scriptCode || undefined,
+      imageUrlMobile: type === 'IMAGE' && isDualDeviceZone ? roadblockImageMobile || null : null,
+      landingUrl: type === 'IMAGE' ? landingUrl || null : null,
+      scriptCode: type === 'SCRIPT' ? scriptCode || null : null,
       zone,
       // Every page-scoped zone is inherently a desktop zone or a mobile zone - always true,
       // not a user-editable toggle. The sitewide zones that explicitly asked for Desktop/Mobile
@@ -355,7 +361,16 @@ export function AdvertisementForm({ advertisement }: Props) {
               <input
                 type="radio"
                 checked={type === 'SCRIPT'}
-                onChange={() => setType('SCRIPT')}
+                onChange={() => {
+                  setType('SCRIPT');
+                  // Switching away from Image should clear any uploaded image/link so a
+                  // leftover image can't get saved alongside the script (see payload gating
+                  // below) or linger in the uploader if the user switches back and forth.
+                  setImageUrl(null);
+                  setRoadblockImageDesktop(null);
+                  setRoadblockImageMobile(null);
+                  setLandingUrl('');
+                }}
               />
               Embed Script
             </label>
